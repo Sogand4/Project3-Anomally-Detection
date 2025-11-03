@@ -1,0 +1,57 @@
+# Copy of templates/project3_manifest_template.yaml for convenience.
+# Update every field for your project before running the validator.
+
+project:
+  title: "Real-Time Anomaly Detection for ____"
+  scenario: "choose: streaming_health | payments_fraud | civic_observatory | custom"
+  team_members:
+    - name: "Student Name"
+      role: "Lead Spec Author"
+  spec_iteration_notes: "Link to SpecKit history or doc explaining major revisions."
+
+speckit:
+  spec_root: "spec/"
+  manifest_version: "0.1.0"
+  validation_command: "speckit check --report reports/speckit_report.json"
+  last_validation: "2025-11-01T00:00:00Z"
+
+clause_control_test:
+  promises:
+    - clause: "Customer telemetry only stored in ca-central-1."
+      control: "DNS firewall + IAM boundary preventing logging to us-east-1."
+      test: "tests/redbar/test_dns_data_residency.py::test_canada_log_bucket"
+      enforcement_point: "AWS Route53 Resolver dns-firewall rule"
+
+monetization:
+  events:
+    - name: "Example premium alerts"
+      description: "Tiered SLA with 5-min response backed by on-call rotation."
+      projected_monthly_revenue: 5000
+      evidence_path: "analysis/monetization/premium_alerts.md"
+      acceptance_test: "tests/redbar/test_revenue_guardrails.py::test_premium_alerts_respect_policy"
+  viability_statement: "Starter text — replace with your own viability summary."
+
+policies:
+  tos_path: "policy/terms_of_service.md"
+  privacy_path: "policy/privacy_addendum.md"
+  dns_policy_path: "policy/dns_policy.md"
+  log_policy_path: "policy/log_retention_policy.md"
+  data_policy_path: "policy/data_handling_policy.md"
+
+observability:
+  uptime_slo: "99.9"
+  p95_latency_ms: 2000
+  monitoring_stack: ["CloudWatch", "PagerDuty"]
+  chaos_experiment_summary: "experiments/chaos/placeholder.md"
+
+ai_usage:
+  tools: ["GitHub Copilot"]
+  documentation_path: "docs/ai_collaboration_log.md"
+  review_cadence: "Weekly prompt review"
+
+risks:
+  ledger_snapshot: "docs/ethics_debt_ledger.md"
+  high_risk_items:
+    - description: "Telemetry resale may drift beyond privacy policy."
+      mitigation: "Weekly privacy audit + automated policy diff test."
+      associated_test: "tests/redbar/test_policy_alignment.py::test_telemetry_resale_coverage"
