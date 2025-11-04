@@ -5,7 +5,7 @@ This folder mirrors the repository skeleton we will seed in GitHub Classroom.
 Key commands (run from repo root):
 
 ```bash
-uv run python projects/analysis/validate_project3_manifest.py --path project3.yaml --check-paths
+uv run python tools/validate_manifest.py --path project3.yaml --check-paths
 speckit check --report reports/speckit_report.json
 pytest tests/redbar --maxfail=1
 ```

@@ -7,7 +7,7 @@ project:
   team_members:
     - name: "Student Name"
       role: "Lead Spec Author"
-  spec_iteration_notes: "Link to SpecKit history or doc explaining major revisions."
+  spec_iteration_notes: "spec/iteration_notes.md"
 
 speckit:
   spec_root: "spec/"
@@ -28,7 +28,7 @@ monetization:
       description: "Tiered SLA with 5-min response backed by on-call rotation."
       projected_monthly_revenue: 5000
       evidence_path: "analysis/monetization/premium_alerts.md"
-      acceptance_test: "tests/redbar/test_revenue_guardrails.py::test_premium_alerts_respect_policy"
+      acceptance_test: "tests/redbar/test_dns_data_residency.py::test_canada_log_bucket"
   viability_statement: "Starter text — replace with your own viability summary."
 
 policies:
