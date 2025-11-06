@@ -25,3 +25,5 @@ uv run pytest tests/redbar --maxfail=1
 ```
 
 Replace the placeholder files before submitting. Each directory is pre-created so CI and local tooling should work out of the box.
+
+`tools/validate_manifest.py` checks that the manifest structure and file references are valid. Replace the placeholder files (spec iteration notes, monetization evidence, red-bar tests) with your own before submitting.
