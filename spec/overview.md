@@ -63,19 +63,22 @@ and evaluated by its acceptance test in:
 
 ## 5. Clause → Control → Test Mapping
 
-### Promise 1 — Uptime and Graceful Degradation
-- **Clause:** Fraud scoring API maintains **99.9% uptime** and degrades by suspending non critical premium fanout before failing core scoring.  
-- **Control:** DNS failover, multi AZ deployment, rate limiting, latency based routing.  
+### Promise 1 — Uptime and Graceful Degradation (DNS-focused)
+- **Clause:** The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial failure, the platform first suspends non-critical **premium alert fanout** while keeping core fraud scoring available for all merchants.
+- **Control:** DNS failover records, multi-AZ deployment for the scoring service, per-tenant rate limiting, and latency-based routing between healthy instances.
+- **Enforcement Point:** DNS routing configuration and health-checked scoring endpoints.
 - **Test:** `tests/redbar/test_dns_data_residency.py::test_uptime_placeholder`
 
-### Promise 2 — Telemetry Privacy and Data Residency
-- **Clause:** Canadian fraud telemetry remains in **ca central 1**, PAN/CVV never logged, raw logs deleted after 30 days.  
-- **Control:** Log retention policy, tokenization pipeline, region tagged log sinks, DNS firewall.  
+### Promise 2 — Telemetry Privacy and Data Residency (logging + retention)
+- **Clause:** Canadian fraud telemetry remains in **ca-central-1**. PAN and CVV values are never written to any log, and **raw fraud logs are deleted within 30 days**, with only anonymized aggregates retained up to one year.
+- **Control:** Log retention policy (S3 lifecycle rules), tokenization pipeline, region-tagged log sinks, and DNS firewall blocking export to non-approved regions.
+- **Enforcement Point:** Log retention controls on fraud log buckets and DNS firewall rules for export destinations.
 - **Test:** `tests/redbar/test_dns_data_residency.py::test_canada_log_bucket`
 
 ### Promise 3 — Monetization Guardrail (Premium Alerts)
-- **Clause:** Premium alerts increase revenue without weakening privacy or fairness for standard merchants.  
-- **Control:** Monetization configuration, alert throttling rules, ToS and privacy alignment.  
+- **Clause:** **Premium alerts** may speed up delivery and improve dashboard freshness, but they **must not weaken privacy, data-retention, or fairness protections** compared to the standard tier. The fraud model, data fields collected, and retention windows remain the same for all merchants.
+- **Control:** Monetization configuration flags, alert queue routing rules, and ToS/Privacy policy text that fix identical telemetry and retention across tiers.
+- **Enforcement Point:** Premium feature flag configuration, alert queue definitions, and policy files (`terms_of_service.md`, `privacy_addendum.md`, `log_retention_policy.md`).
 - **Test:** `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
 ---
