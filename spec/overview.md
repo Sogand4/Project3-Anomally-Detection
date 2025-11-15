@@ -87,7 +87,10 @@ and evaluated by its acceptance test in:
 
 ---
 
+# TODO
 ## 7. Architecture Overview
+
+![architecture diagram](architecture_diagram.png)
 
 Edge: Merchant checkout integrations (web and mobile) call a tokenised fraud scoring API over HTTPS. Mutual TLS between merchants and edge, tenant scoped API keys, signed client config. Premium merchants use a dedicated subdomain for alert webhooks but share the same scoring endpoint.
 
