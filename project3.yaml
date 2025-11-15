@@ -2,10 +2,10 @@
 # Update every field for your project before running the validator.
 
 project:
-  title: "Real-Time Anomaly Detection for ____"
-  scenario: "choose: streaming_health | payments_fraud | civic_observatory | custom"
+  title: "Real-Time Anomaly Detection for Payments Fraud Radar"
+  scenario: "payments_fraud"
   team_members:
-    - name: "Student Name"
+    - name: "Sogand Haji-Salimi"
       role: "Lead Spec Author"
   spec_iteration_notes: "spec/iteration_notes.md"
 
