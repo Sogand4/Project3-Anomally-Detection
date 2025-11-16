@@ -27,6 +27,7 @@ Additional items still needed later:
 - Added **test_monetization_fairness.py** with 12 tests for Promise 3 (model parity, telemetry equality, retention matching, delivery speed scope, policy alignment, queue isolation, dashboard parity, webhook fairness, data access limits).
 - Each test documents specific harm to stakeholders (including empty chair), enforcement points, and control requirements.
 - All tests designed to fail until controls are implemented, following red-bar testing principle.
+- Added full monetization plan for Premium Alerts, including revenue projections, policy touchpoints, and Clause→Control→Test linkage; integrated worksheet and created acceptance test reference.
 
 Additional items still needed later:
 - Wire red bars into `project3.yaml` (uptime, data residency, monetization).
