@@ -14,7 +14,7 @@
 - Identified and documented primary stakeholders and the empty-chair stakeholder.
 - Added a clear **risk and mitigation** section covering residency drift, false positives, fairness across tiers, surveillance drift via retention, and region-level outages.
 
-Additional items still needed later:
+Next steps:
 - Update `project3.yaml` with the three promises, monetization event, acceptance test paths.
 - Fill in DNS, log retention, and data handling policies under `policy/`.
 - Add first entries to AI collaboration log and ethics debt ledger.
@@ -29,8 +29,29 @@ Additional items still needed later:
 - All tests designed to fail until controls are implemented, following red-bar testing principle.
 - Added full monetization plan for Premium Alerts, including revenue projections, policy touchpoints, and Clause→Control→Test linkage; integrated worksheet and created acceptance test reference.
 
-Additional items still needed later:
+Next steps:
 - Wire red bars into `project3.yaml` (uptime, data residency, monetization).
 - Write missing policy files (DNS, log retention, data handling) and draft ToS + Privacy updates.
 - Create the monetization worksheet for premium alerts and add the acceptance test path.
 - Run validators (`validate_project3_manifest`, `speckit check`) and run `pytest tests/redbar` to confirm all tests fail.
+
+## Iteration 2025-11-17
+
+- Produced first full drafts of all required policy documents:
+  - `terms_of_service.md` (simplified, monetization-aligned)
+  - `privacy_addendum.md` (complete PIPEDA/DPDP alignment, retention + residency guarantees)
+  - `log_retention_policy.md` (full per-source retention rules and enforcement tests)
+  - `dns_policy.md` (resolver layout, firewall rules, monetization guardrail)
+  - `data_handling.md` (data classification, allowed processing, storage regions, empty-chair protections)
+
+- Ensured consistent residency, retention, and monetization promises across all files  
+- Ensured empty-chair stakeholder (small Indian merchants) is supported in the relevant docs  
+- Streamlined ToS to focus only on monetization, SLAs, and contractual obligations 
+- Added LLM-generation notes and pending human review sections where needed
+
+Next steps:
+- Run manifest validation: `uv run python tools/validate_manifest.py --path project3.yaml --check-paths`
+- Run red-bar tests to verify they fail appropriately: `uv run pytest tests/redbar --maxfail=1 -v`
+- Document planned chaos experiments in experiments/chaos/placeholder.md
+- Ethics debt ledger populated
+- Update AI collaboration document
