@@ -1,0 +1,116 @@
+# Chaos Experiment Log
+
+<!--
+- Date/time:
+- Scenario injected:
+- Expected behavior:
+- Observed behavior:
+- Follow-up actions:
+
+Reference this file in `project3.yaml` (observability section). -->
+
+This log documents chaos experiments used to validate our reliability and graceful degradation promises, especially for the empty-chair stakeholder (small Indian merchants on the standard tier).
+
+---
+
+## Experiment 1 — ca-central-1 AZ Failure During Peak Load
+
+**Date/time:** 2025-11-17T20:00Z (simulated)  
+**Scenario injected:**  
+- Hard-fail one Availability Zone in `ca-central-1` hosting a subset of fraud scoring instances during peak evening load.  
+- Leave remaining AZ(s) healthy.
+
+**Expected behavior:**  
+- Core fraud scoring remains available (≥99.9 percent uptime target preserved).  
+- Traffic drains from unhealthy instances via health checks.  
+- Premium alert fanout may degrade, but standard-tier scoring and alerts still function.  
+- Small Canadian and Indian merchants continue to receive fraud decisions with at most minor latency increase.
+
+**Observed behavior (simulated, to be validated in future run):**  
+- Some requests temporarily routed to unhealthy instances before health checks remove them.  
+- Latency spikes in the failed AZ’s segment; global P99 approaches SLO boundary.  
+- Premium alert delivery queues begin to back up.  
+- No explicit circuit breaker in place to pause premium fanout.
+
+**Follow-up actions:**  
+- Implement health-check based removal for scoring instances at the load balancer.  
+- Add explicit graceful-degradation policy: suspend premium alert fanout first when P99 latency exceeds threshold, preserving core scoring.  
+- Encode these behaviors in red-bar tests:  
+  - `tests/redbar/test_uptime_reliability.py::test_multi_az_deployment_active`  
+  - `tests/redbar/test_uptime_reliability.py::test_health_check_endpoints_monitored`  
+  - `tests/redbar/test_uptime_reliability.py::test_graceful_degradation_order`
+
+---
+
+## Experiment 2 — Premium Alert Queue Overload
+
+**Date/time:** 2025-11-17T21:00Z (simulated)  
+**Scenario injected:**  
+- Flood the premium alert queue with burst traffic from a small number of premium merchants in `ap-south-1`.  
+- Keep standard-tier scoring traffic at normal peak levels.
+
+**Expected behavior:**  
+- Core fraud scoring for all merchants remains within P99 latency SLO.  
+- If resources become constrained, premium alert fanout is throttled or paused before any impact to scoring.  
+- Standard-tier merchants (including small Indian merchants — empty chair) do not experience increased false negatives due to resource starvation.
+
+**Observed behavior (simulated, to be validated in future run):**  
+- Premium alert worker pool consumes a large share of CPU and I/O during burst.  
+- Some standard-tier alerts are delayed; scoring remains functional but close to latency limits.  
+- No clear separation between scoring capacity and alert fanout capacity.
+
+**Follow-up actions:**  
+- Separate worker pools/queues for core scoring vs alert fanout; cap alert workers.  
+- Configure a load-based circuit breaker to pause premium alert fanout when scoring latency exceeds threshold.  
+- Enforce fairness through red-bar tests:  
+  - `tests/redbar/test_monetization_guardrail.py::test_alert_queue_routing_does_not_affect_detection`  
+  - `tests/redbar/test_monetization_guardrail.py::test_premium_uses_same_fraud_model`
+
+---
+
+## Experiment 3 — Misconfigured Log Retention (Surveillance Drift)
+
+**Date/time:** 2025-11-17T22:00Z (config-level exercise)  
+**Scenario injected:**  
+- Manually attempt to extend raw fraud log retention for a “temporary” analytics project from 30 days to 90 days in `ca-central-1`.
+
+**Expected behavior:**  
+- Change is rejected by policy or blocked by CI red-bar tests.  
+- Raw logs remain configured for 30-day deletion; only anonymized aggregates reach 1-year retention.  
+- Privacy commitments in ToS and Privacy Addendum remain accurate.
+
+**Observed behavior (simulated, to be validated in future run):**  
+- No explicit protection against retention changes in initial configuration.  
+- A temporary retention change could be applied without triggering alarms or tests.
+
+**Follow-up actions:**  
+- Treat log retention policy as code and require PR review by Privacy Steward.  
+- Add red-bar tests to block retention extensions:  
+  - `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days`  
+- Document retention constraints in `log_retention_policy.md` and `privacy_addendum.md` as non-negotiable.
+
+---
+
+## Experiment 4 — Cross-Region Export Attempt by Analyst
+
+**Date/time:** 2025-11-17T23:00Z (role/permissions exercise)  
+**Scenario injected:**  
+- Analyst role attempts to export a sample of Canadian fraud telemetry to an S3 bucket in `us-east-1` for ad-hoc analysis.
+
+**Expected behavior:**  
+- IAM boundaries deny write operations to buckets outside `ca-central-1` for Canadian data.  
+- DNS and network controls do not allow unintended cross-region data transfers.  
+- Attempt is logged in audit logs for later review.
+
+**Observed behavior (simulated, to be validated in future run):**  
+- No explicit least-privilege boundary simulated yet; risk exists that analyst roles could be over-permissioned.  
+- Audit logging assumptions not yet verified via tests.
+
+**Follow-up actions:**  
+- Tighten IAM roles to deny cross-region writes for jurisdiction-scoped analyst roles.  
+- Add red-bar coverage for residency enforcement:  
+  - `tests/redbar/test_data_residency_privacy.py::test_canadian_logs_stay_in_ca_central_1`  
+  - `tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region`  
+- Ensure audit logs capture denied export attempts for governance review.
+
+---
