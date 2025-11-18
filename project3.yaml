@@ -13,23 +13,33 @@ speckit:
   spec_root: "spec/"
   manifest_version: "0.1.0"
   validation_command: "speckit check --report reports/speckit_report.json"
-  last_validation: "2025-11-01T00:00:00Z"
+  last_validation: "2025-11-17T00:00:00Z"
 
 clause_control_test:
   promises:
-    - clause: "Customer telemetry only stored in ca-central-1."
-      control: "DNS firewall + IAM boundary preventing logging to us-east-1."
-      test: "tests/redbar/test_dns_data_residency.py::test_canada_log_bucket"
-      enforcement_point: "AWS Route53 Resolver dns-firewall rule"
+    - clause: "The fraud scoring API maintains 99.9% monthly uptime. Under load or partial failure, the platform first suspends non-critical premium alert fanout while keeping core fraud scoring available for all merchants."
+      control: "DNS failover records, multi-AZ deployment for the scoring service, per-tenant rate limiting, and latency-based routing between healthy instances."
+      test: "tests/redbar/test_uptime_reliability.py::test_graceful_degradation_order"
+      enforcement_point: "DNS routing configuration and health-checked scoring endpoints"
+
+    - clause: "Canadian fraud telemetry remains in ca-central-1 and Indian telemetry remains in ap-south-1; PAN and CVV are never written to any log, and raw fraud logs are deleted within 30 days with only anonymized aggregates retained up to one year."
+      control: "Region-locked DNS resolvers, region-scoped S3/log buckets, ingestion schema validation for PAN/CVV, and S3 lifecycle rules for 30-day deletion and 1-year aggregates."
+      test: "tests/redbar/test_data_residency_privacy.py::test_residency_and_retention_enforced"
+      enforcement_point: "Log bucket configuration, ingestion schema checks, DNS firewall rules, and lifecycle policies"
+
+    - clause: "Premium alerts may speed up delivery and improve dashboard freshness, but they must not weaken privacy, data-retention, or fairness protections compared to the standard tier; the fraud model, telemetry fields, and retention windows remain the same for all merchants."
+      control: "Monetization feature flags, shared ingestion schema and storage pipelines for standard and premium tiers, and identical S3 lifecycle rules across tiers."
+      test: "tests/redbar/test_monetization_guardrail.py::test_premium_telemetry_and_retention_identical"
+      enforcement_point: "Premium feature flag configuration, alert queue routing rules, and policy files (terms_of_service.md, privacy_addendum.md, log_retention_policy.md)"
 
 monetization:
   events:
-    - name: "Example premium alerts"
-      description: "Tiered SLA with 5-min response backed by on-call rotation."
+    - name: "Premium alerts"
+      description: "Paid tier that reduces alert delivery latency and dashboard refresh interval without changing fraud model, telemetry fields, or retention."
       projected_monthly_revenue: 5000
-      evidence_path: "analysis/monetization/premium_alerts.md"
-      acceptance_test: "tests/redbar/test_dns_data_residency.py::test_canada_log_bucket"
-  viability_statement: "Starter text — replace with your own viability summary."
+      evidence_path: "analysis/monetization/premium_alerts_plan.md"
+      acceptance_test: "tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical"
+  viability_statement: "Premium alerts are viable if enough merchants value faster alert delivery while the platform preserves identical privacy, residency, and fairness guarantees across tiers."
 
 policies:
   tos_path: "policy/terms_of_service.md"
@@ -41,17 +51,29 @@ policies:
 observability:
   uptime_slo: "99.9"
   p95_latency_ms: 2000
-  monitoring_stack: ["CloudWatch", "PagerDuty"]
+  monitoring_stack: ["CloudWatch", "PagerDuty", "Prometheus"]
   chaos_experiment_summary: "experiments/chaos/placeholder.md"
 
 ai_usage:
-  tools: ["GitHub Copilot"]
+  tools: ["GitHub Copilot", "ChatGPT-5.1"]
   documentation_path: "docs/ai_collaboration_log.md"
   review_cadence: "Weekly prompt review"
 
 risks:
   ledger_snapshot: "docs/ethics_debt_ledger.md"
   high_risk_items:
-    - description: "Telemetry resale may drift beyond privacy policy."
-      mitigation: "Weekly privacy audit + automated policy diff test."
-      associated_test: "tests/redbar/test_policy_alignment.py::test_telemetry_resale_coverage"
+    - description: "Data residency drift: Canadian or Indian telemetry stored or processed outside ca-central-1 / ap-south-1."
+      mitigation: "Region-locked DNS resolvers, S3 buckets scoped per region, and IAM boundaries preventing cross-region exports."
+      associated_test: "tests/redbar/test_dns_firewall.py::test_residency_enforced"
+
+    - description: "Surveillance drift: pressure to extend raw fraud log retention beyond 30 days for analytics or premium reporting."
+      mitigation: "Hard 30-day S3 lifecycle rule for raw logs; premium tier prohibited from extending retention; anonymized aggregates only."
+      associated_test: "tests/redbar/test_data_residency_privacy.py::test_log_retention_30_days"
+
+    - description: "Premium tier distorting fairness by altering model behavior or telemetry schema."
+      mitigation: "Single shared fraud model + ingestion schema for all tiers; premium only affects delivery speed, not detection logic."
+      associated_test: "tests/redbar/test_model_parity.py::test_single_model_enforced"
+
+    - description: "Cross-region outage cascade: DNS failover or routing misconfiguration causing failures in CA to impact IN, or vice versa."
+      mitigation: "Disable cross-region failover paths; maintain isolated scoring stacks; validate resolvers per region."
+      associated_test: "tests/redbar/test_dns_firewall.py::test_cross_region_failover_disabled"
