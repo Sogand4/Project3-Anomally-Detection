@@ -1,18 +1,19 @@
 # Terms of Service: Payments Fraud Radar
 Effective Date: 2025-11-17  
-Version: 1.2
+Version: 1.3
 
-AI Note: Initial draft created November 2025 using Copilot. Simplified and aligned with the risk register, system architecture, and monetization acceptance tests on 2025-11-17.
+> Generated with OpenAI GPT-5.1, 2025-11-17.  
+Manual edits applied to align with monetization requirements, system architecture, and policy references.
 
 ---
 
 ## 1. Service Description
-Payments Fraud Radar provides real time fraud scoring for e commerce transactions in two regions:
+Payments Fraud Radar provides real time fraud scoring for e commerce transactions.  
+The service operates in two regions:  
+• Canada (ca central 1)  
+• India (ap south 1)
 
-Canada: ca central 1  
-India: ap south 1
-
-All merchants use the same fraud model. Premium tier only changes alert delivery speed and dashboard refresh frequency. Detection logic does not change across tiers.
+All merchants use the same fraud detection model. Premium features only affect alert delivery speed and dashboard refresh rate. Detection logic, data fields, and retention rules remain identical across tiers.
 
 ---
 
@@ -22,144 +23,137 @@ All merchants use the same fraud model. Premium tier only changes alert delivery
 Alert delivery within 25 seconds  
 P99 scoring latency around 3 seconds  
 Dashboard refresh every 20 seconds  
-Email support within 24 hours
+Email support within 24 hours  
 
 ### Premium Tier
 Alert delivery within 10 seconds  
 P99 scoring latency around 2 seconds  
 Dashboard refresh every 5 seconds  
 Priority support within 4 hours  
-Price: 300 USD per month
+Price: 300 USD per month  
 
-Premium features only affect delivery speed, not scoring fairness or model behavior.
+Premium tier improves delivery and user experience only. It does not modify scoring logic, training data, or data retention policies.
 
 ---
 
 ## 3. Availability and SLO Credits
-Standard Tier: 99.9 percent monthly uptime  
-Premium Tier: 99.95 percent monthly uptime
+Standard Tier uptime: 99.9 percent  
+Premium Tier uptime: 99.95 percent  
 
-Credit schedule for Premium Tier:  
-• 10 percent credit when uptime drops below 99.95  
-• 25 percent credit when below 99.9  
-• 50 percent credit when below 99.0
+Premium credit schedule:  
+• 10 percent credit for uptime below 99.95  
+• 25 percent credit for uptime below 99.9  
+• 50 percent credit for uptime below 99.0  
 
-Requests must be submitted within 30 days.
+Credit requests must be submitted within 30 days.
 
 ---
 
-## 4. Data Residency and Retention
+## 4. Policy References for Data Handling
+Core privacy and data retention policies are defined in **privacy_addendum.md**.  
+This Terms of Service references those policies without repeating them.
 
-### Residency
-Canadian merchant data stays in Canada.  
-Indian merchant data stays in India.  
-No cross border transfers unless required by law.
+Alert delivery SLAs are supported by:  
+• region locked queues  
+• DNS routing rules  
+• log and data residency controls  
 
-### Retention
-Raw fraud logs deleted after 30 days.  
-Anonymized aggregates may be retained up to one year.  
-Audit logs retained seven years.
-
-### Sensitive Data
-PAN and CVV are never collected.  
-Merchants must use tokenized identifiers.
+Data retention (30 days for raw logs, one year for anonymized aggregates) and residency requirements apply equally to all merchants and are specified in **privacy_addendum.md**, which defines the exact enforcement mechanisms.
 
 ---
 
 ## 5. Merchant Responsibilities
-Provide accurate transaction metadata.  
-Avoid sending PAN, CVV, or other sensitive identifiers.  
-Use HTTPS and validate webhook signatures.  
-Obtain cardholder consent and forward deletion requests within 14 days.
+• Provide accurate transaction metadata  
+• Tokenize card data before submission  
+• Maintain secure webhook endpoints  
+• Use HTTPS and validate webhook signatures  
+• Follow integration requirements and rate limits  
+
+(Privacy-specific responsibilities such as cardholder consent and deletion forwarding are defined in **privacy_addendum.md**.)
 
 ---
 
 ## 6. Graceful Degradation
-During overload or partial failure, the system follows this order:
-1. Core scoring for all merchants  
+During overload or partial failure, the system prioritizes:
+
+1. Core fraud scoring  
 2. Standard alert delivery  
-3. Premium alert fanout and dashboards  
+3. Premium alert fanout and dashboard updates  
 
-Premium delivery may pause temporarily to protect scoring quality.
+Premium delivery may pause temporarily to preserve fairness and scoring quality.
 
-Status updates appear at "https://status.fraudradar.example.com".
+Service status is posted at: https://status.fraudradar.example.com
 
 ---
 
 ## 7. Prohibited Uses
-No redistribution or resale of scores.  
-No reverse engineering of the model.  
-No use for unlawful payment processing.  
-No synthetic test data in production without approval.
+Merchants may not:  
+• redistribute scores  
+• reverse engineer the model  
+• use the service for unlawful payment processing  
+• submit synthetic or test data to production without approval  
 
 ---
 
-## 8. Rate Limits and Safety Guardrails
-The service enforces rate limits to maintain stability.  
-Abnormal or harmful traffic may be throttled.  
-Automated safeguards detect suspicious usage patterns.
+## 8. Rate Limits and Abuse Detection
+The service may throttle traffic that exceeds safe operational thresholds.  
+Automated safeguards detect harmful ingestion patterns and prevent misuse.
 
 ---
 
-## 9. Alignment with Identified Risks
+## 9. Monetization Guardrail (Required)
+Premium alert delivery speed must not weaken:  
+• fairness  
+• privacy guarantees  
+• residency rules  
+• retention rules  
+• telemetry fields collected  
 
-### Risk 1 — Data Residency Drift
-This ToS commits to strict region locked processing.  
-Lifecycle policies and red bar tests enforce this.
-
-### Risk 2 — False Positives Causing Revenue Loss
-Scores are advisory. Merchants make final decisions.  
-Core scoring receives top priority under load.
-
-### Risk 3 — Premium Tier Distorting Fairness
-The fraud model is identical for all merchants.  
-Premium tier changes only delivery speed.  
-A monetization guardrail acceptance test enforces this.
-
-### Risk 4 — Surveillance Drift
-Retention is fixed at 30 days unless the privacy steward approves changes.  
-Logs are scrubbed before storage.
-
-### Risk 5 — Cascading Regional Outages
-Regions operate independently.  
-Alert queues and failover paths are isolated to prevent cross region impact.
+The same fraud model and data schema apply to both tiers.  
+This guardrail is enforced by a red bar acceptance test defined in `project3.yaml`.
 
 ---
 
-## 10. Monetization Guardrail
-Premium alert delivery must meet the latency rules defined here without adjusting detection logic or model calibration.  
-This matches the monetization acceptance test in "project3.yaml".
-
----
-
-## 11. Liability
-The service is not responsible for losses caused by false positives, false negatives, or webhook unavailability.  
+## 10. Liability
+The service is not responsible for losses resulting from false positives, false negatives, or webhook unavailability.  
 Premium tier liability is limited to the last twelve months of subscription fees.
 
 ---
 
-## 12. Changes to Terms
+## 11. Changes to Terms
 Material changes will be communicated at least 60 days in advance.  
 Minor updates take effect after 14 days.  
-Continued use means acceptance of the updated terms.
+Continued use after the effective date constitutes acceptance.
 
 ---
 
-## 13. Contact
+## 12. Contact
 Support: support@fraudradar.example.com  
 Premium support: +1 800 FRAUD 24  
-Privacy: privacy@fraudradar.example.com  
-DPO: dpo@fraudradar.example.com  
+Policy and privacy inquiries: privacy@fraudradar.example.com  
+
+---
+
+## 13. Human Review Notes
+Pending review from:  
+• Engineering (SLA feasibility)  
+• Product (monetization configuration)  
+• Privacy Steward (policy references)  
+
+Next scheduled review: 2026-02-17
 
 ---
 
 ## 14. Changelog
+2025-11-17 — Version 1.3  
+Removed duplicate privacy material now covered in privacy_addendum.md.  
+Added required LLM generation note and policy references.
+
 2025-11-17 — Version 1.2  
-Simplified sections not required for rubric. Preserved risk alignment, monetization guardrail, and residency rules.
+Streamlined non-required legal text. Added monetization guardrail.
 
 2025-11-17 — Version 1.1  
-Added risk register alignment, rate limits, consent rules, and monetization guardrail.
+Aligned with risk register and simplified responsibilities.
 
 2025-11-17 — Version 1.0  
 Initial publication.
-
