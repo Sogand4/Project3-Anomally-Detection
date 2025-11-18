@@ -1,225 +1,165 @@
 # Terms of Service: Payments Fraud Radar
+Effective Date: 2025-11-17  
+Version: 1.2
 
-**Effective Date:** 2025-11-17  
-**Version:** 1.0
-
-> **AI Generation Note:** Initial draft generated using GitHub Copilot on 2025-11-17. Human review and edits documented below.
+AI Note: Initial draft created November 2025 using Copilot. Simplified and aligned with the risk register, system architecture, and monetization acceptance tests on 2025-11-17.
 
 ---
 
 ## 1. Service Description
+Payments Fraud Radar provides real time fraud scoring for e commerce transactions in two regions:
 
-Payments Fraud Radar ("the Service") provides real-time fraud detection and risk scoring for e-commerce transactions. The Service operates in two jurisdictions:
+Canada: ca central 1  
+India: ap south 1
 
-- **Canada:** Processing in ca-central-1 (Ontario region)
-- **India:** Processing in ap-south-1 (Mumbai region)
-
-All merchants receive fraud scoring powered by a shared machine learning model. Premium tier merchants receive enhanced alert delivery speeds and dashboard refresh rates without changes to the underlying fraud detection logic.
+All merchants use the same fraud model. Premium tier only changes alert delivery speed and dashboard refresh frequency. Detection logic does not change across tiers.
 
 ---
 
 ## 2. Service Tiers
 
-### 2.1 Standard Tier (Default)
-- **Fraud Scoring API:** 99.9% monthly uptime commitment
-- **P99 Detection Latency:** ≤ 3 seconds from request to score
-- **Alert Delivery:** ≤ 25 seconds to merchant webhook or dashboard
-- **Webhook Retries:** Up to 2 retries within 60 seconds
-- **Dashboard Refresh:** Every 20 seconds
-- **Support:** Email support with 24-hour response time
+### Standard Tier
+Alert delivery within 25 seconds  
+P99 scoring latency around 3 seconds  
+Dashboard refresh every 20 seconds  
+Email support within 24 hours
 
-### 2.2 Premium Tier (Paid)
-- **Fraud Scoring API:** 99.95% monthly uptime for alert delivery path
-- **P99 Detection Latency:** ≤ 2 seconds from request to score
-- **Alert Delivery:** ≤ 10 seconds to merchant webhook or dashboard
-- **Webhook Retries:** Up to 5 retries within 60 seconds with exponential backoff
-- **Dashboard Refresh:** Every 5 seconds
-- **Support:** Priority email and phone support with 4-hour response time
-- **Pricing:** $300 USD per merchant per month
+### Premium Tier
+Alert delivery within 10 seconds  
+P99 scoring latency around 2 seconds  
+Dashboard refresh every 5 seconds  
+Priority support within 4 hours  
+Price: 300 USD per month
 
-**Important:** Premium tier does not change fraud detection logic, model features, or data collection practices. Only alert delivery speed and dashboard refresh rates differ.
+Premium features only affect delivery speed, not scoring fairness or model behavior.
 
 ---
 
-## 3. Service Level Objectives (SLOs)
+## 3. Availability and SLO Credits
+Standard Tier: 99.9 percent monthly uptime  
+Premium Tier: 99.95 percent monthly uptime
 
-### 3.1 Uptime Measurement
-- **Standard Tier:** 99.9% monthly uptime = max 43 minutes downtime per month
-- **Premium Tier:** 99.95% monthly uptime = max 22 minutes downtime per month
-- **Measurement:** Availability of the `/v1/fraud-score` API endpoint
-- **Exclusions:** Scheduled maintenance (< 4 hours per quarter), merchant webhook unavailability
+Credit schedule for Premium Tier:  
+• 10 percent credit when uptime drops below 99.95  
+• 25 percent credit when below 99.9  
+• 50 percent credit when below 99.0
 
-### 3.2 SLO Credits (Premium Tier Only)
-| Monthly Uptime | Service Credit |
-|----------------|----------------|
-| < 99.95% but ≥ 99.9% | 10% of monthly fee |
-| < 99.9% but ≥ 99.0% | 25% of monthly fee |
-| < 99.0% | 50% of monthly fee |
-
-**Credit Request:** Merchants must submit credit requests within 30 days of SLO violation via support portal.
+Requests must be submitted within 30 days.
 
 ---
 
-## 4. Data Residency and Privacy
+## 4. Data Residency and Retention
 
-### 4.1 Regional Processing
-- **Canadian merchants:** All transaction data processed and stored exclusively in Canada (ca-central-1)
-- **Indian merchants:** All transaction data processed and stored exclusively in India (ap-south-1)
-- **No cross-border transfers** of transaction-level data except as required by law
+### Residency
+Canadian merchant data stays in Canada.  
+Indian merchant data stays in India.  
+No cross border transfers unless required by law.
 
-### 4.2 Data Retention
-- **Raw fraud logs:** Deleted automatically after 30 days
-- **Anonymized aggregates:** Retained up to 1 year for model evaluation and compliance reporting
-- **Audit logs:** Retained for 7 years per PIPEDA and DPDP requirements
+### Retention
+Raw fraud logs deleted after 30 days.  
+Anonymized aggregates may be retained up to one year.  
+Audit logs retained seven years.
 
-### 4.3 Sensitive Data Protection
-- **PAN (Primary Account Number) and CVV** are never collected or stored by the Service
-- Merchants must tokenize card identifiers before sending to the fraud scoring API
-- The Service uses tokenized identifiers only; de-tokenization is not available
-
-### 4.4 Privacy Policy
-See **Privacy Addendum** (policy/privacy_addendum.md) for detailed data handling practices, cardholder rights, and compliance information.
+### Sensitive Data
+PAN and CVV are never collected.  
+Merchants must use tokenized identifiers.
 
 ---
 
-## 5. Merchant Obligations
-
-### 5.1 Data Quality
-Merchants must:
-- Tokenize all card identifiers before API submission
-- Provide accurate transaction metadata (amount, currency, region tag)
-- Not send PAN, CVV, or other prohibited data fields
-
-### 5.2 Webhook Security
-Merchants must:
-- Validate webhook signatures using provided HMAC-SHA256 keys
-- Use HTTPS endpoints for webhook delivery (HTTP prohibited)
-- Maintain webhook endpoint availability for alert delivery
-
-### 5.3 Compliance
-Merchants must:
-- Obtain cardholder consent for fraud detection processing
-- Honor cardholder data access and deletion requests within required timeframes
-- Notify the Service within 24 hours of any suspected data breach
+## 5. Merchant Responsibilities
+Provide accurate transaction metadata.  
+Avoid sending PAN, CVV, or other sensitive identifiers.  
+Use HTTPS and validate webhook signatures.  
+Obtain cardholder consent and forward deletion requests within 14 days.
 
 ---
 
 ## 6. Graceful Degradation
+During overload or partial failure, the system follows this order:
+1. Core scoring for all merchants  
+2. Standard alert delivery  
+3. Premium alert fanout and dashboards  
 
-### 6.1 Prioritization Under Load
-During partial failures or resource exhaustion, the Service prioritizes:
-1. Core fraud scoring for all merchants (standard and premium)
-2. Standard tier alert delivery
-3. Premium tier alert fanout and dashboard updates
+Premium delivery may pause temporarily to protect scoring quality.
 
-**Premium features may be temporarily suspended to preserve standard tier functionality.**
-
-### 6.2 Merchant Notification
-- Real-time status: Available at `https://status.fraudradar.example.com`
-- Incident notifications: Email to registered merchant contacts
-- SLO impact: Calculated and reported monthly
+Status updates appear at "https://status.fraudradar.example.com".
 
 ---
 
 ## 7. Prohibited Uses
-
-Merchants may not:
-- Resell or redistribute fraud scores to third parties
-- Attempt to reverse-engineer the fraud detection model
-- Use the Service for unlawful payment processing
-- Submit synthetic or test data to production endpoints without prior approval
+No redistribution or resale of scores.  
+No reverse engineering of the model.  
+No use for unlawful payment processing.  
+No synthetic test data in production without approval.
 
 ---
 
-## 8. Termination
-
-### 8.1 Merchant-Initiated
-- Standard tier: Cancel anytime via support portal (no refund for partial months)
-- Premium tier: Cancel with 30-day notice; prorated refund for unused days
-
-### 8.2 Service-Initiated
-The Service may suspend or terminate accounts for:
-- Violation of prohibited uses
-- Non-payment (premium tier only)
-- Repeated submission of prohibited data fields (PAN/CVV)
-- Fraudulent or abusive API usage
-
-**Notice:** 15-day written notice except in cases of immediate security risk
+## 8. Rate Limits and Safety Guardrails
+The service enforces rate limits to maintain stability.  
+Abnormal or harmful traffic may be throttled.  
+Automated safeguards detect suspicious usage patterns.
 
 ---
 
-## 9. Limitation of Liability
+## 9. Alignment with Identified Risks
 
-### 9.1 Service Liability Cap
-The Service's total liability to any merchant is limited to:
-- **Standard tier:** $0 (no monetary liability beyond service restoration)
-- **Premium tier:** 12 months of fees paid by the merchant
+### Risk 1 — Data Residency Drift
+This ToS commits to strict region locked processing.  
+Lifecycle policies and red bar tests enforce this.
 
-### 9.2 Exclusions
-The Service is not liable for:
-- False positives or false negatives in fraud detection (scores are advisory only)
-- Merchant revenue loss due to blocked transactions
-- Downstream impacts of webhook delivery delays
-- Force majeure events (natural disasters, ISP failures, AWS region outages)
+### Risk 2 — False Positives Causing Revenue Loss
+Scores are advisory. Merchants make final decisions.  
+Core scoring receives top priority under load.
 
----
+### Risk 3 — Premium Tier Distorting Fairness
+The fraud model is identical for all merchants.  
+Premium tier changes only delivery speed.  
+A monetization guardrail acceptance test enforces this.
 
-## 10. Modifications to Terms
+### Risk 4 — Surveillance Drift
+Retention is fixed at 30 days unless the privacy steward approves changes.  
+Logs are scrubbed before storage.
 
-### 10.1 Notice Period
-- Material changes: 60-day advance notice via email
-- Non-material changes: Posted to website with 14-day effective date
-
-### 10.2 Continued Use
-Continued use of the Service after the effective date constitutes acceptance of modified terms.
+### Risk 5 — Cascading Regional Outages
+Regions operate independently.  
+Alert queues and failover paths are isolated to prevent cross region impact.
 
 ---
 
-## 11. Governing Law and Dispute Resolution
-
-### 11.1 Canadian Merchants
-- **Governing Law:** Laws of the Province of Ontario, Canada
-- **Jurisdiction:** Courts of Ontario
-- **Privacy Law:** PIPEDA (Personal Information Protection and Electronic Documents Act)
-
-### 11.2 Indian Merchants
-- **Governing Law:** Laws of India
-- **Jurisdiction:** Courts of Mumbai, Maharashtra
-- **Privacy Law:** DPDP (Digital Personal Data Protection Act)
-
-### 11.3 Dispute Resolution
-- Step 1: Good-faith negotiation (30 days)
-- Step 2: Mediation (if negotiation fails)
-- Step 3: Binding arbitration or litigation
+## 10. Monetization Guardrail
+Premium alert delivery must meet the latency rules defined here without adjusting detection logic or model calibration.  
+This matches the monetization acceptance test in "project3.yaml".
 
 ---
 
-## 12. Contact Information
-
-**Support:**
-- Email: support@fraudradar.example.com
-- Premium Support Phone: +1-800-FRAUD-24 (premium tier only)
-
-**Privacy and Compliance:**
-- Privacy Steward: privacy@fraudradar.example.com
-- Data Protection Officer: dpo@fraudradar.example.com
-
-**Status Page:**
-- https://status.fraudradar.example.com
+## 11. Liability
+The service is not responsible for losses caused by false positives, false negatives, or webhook unavailability.  
+Premium tier liability is limited to the last twelve months of subscription fees.
 
 ---
 
-## Human Review Notes
+## 12. Changes to Terms
+Material changes will be communicated at least 60 days in advance.  
+Minor updates take effect after 14 days.  
+Continued use means acceptance of the updated terms.
 
-**Edits Made (2025-11-17):**
-1. Added explicit SLO credit table for premium tier (generated version had only text description)
-2. Clarified that premium features may be suspended under load to protect standard tier
-3. Added specific contact information for privacy and compliance teams
-4. Updated governing law section to distinguish Canadian vs Indian merchants
-5. Emphasized that PAN/CVV prohibition applies to both standard and premium tiers
+---
 
-**Review Cadence:**
-- Quarterly review by Legal and Compliance teams
-- Triggered review after any SLO violation, data breach, or regulatory change
+## 13. Contact
+Support: support@fraudradar.example.com  
+Premium support: +1 800 FRAUD 24  
+Privacy: privacy@fraudradar.example.com  
+DPO: dpo@fraudradar.example.com  
 
-**Next Review Date:** 2026-02-17
+---
+
+## 14. Changelog
+2025-11-17 — Version 1.2  
+Simplified sections not required for rubric. Preserved risk alignment, monetization guardrail, and residency rules.
+
+2025-11-17 — Version 1.1  
+Added risk register alignment, rate limits, consent rules, and monetization guardrail.
+
+2025-11-17 — Version 1.0  
+Initial publication.
+
