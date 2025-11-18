@@ -52,7 +52,7 @@ observability:
   uptime_slo: "99.9"
   p95_latency_ms: 2000
   monitoring_stack: ["CloudWatch", "PagerDuty", "Prometheus"]
-  chaos_experiment_summary: "experiments/chaos/placeholder.md"
+  chaos_experiment_summary: "experiments/chaos/chaos_experiment_log.md"
 
 ai_usage:
   tools: ["GitHub Copilot", "ChatGPT-5.1"]
