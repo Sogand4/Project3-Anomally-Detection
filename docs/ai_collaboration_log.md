@@ -20,6 +20,10 @@ Update weekly and reference this file in `project3.yaml`. -->
 | 2025-11-16 | ChatGPT-5.1  | “Refactor ToS to remove duplicated privacy commitments.” | Produced ToS v1.3 aligned with SLAs, monetization guardrails, and SLO credits. | Keep | Now matches rubric and avoids redundancy with privacy_addendum. |
 | 2025-11-16 | ChatGPT-5.1  | “Draft ethics.debt_ledger.md entries for fairness drift, residency drift, and monetization risk.” | Created ledger entries with tests and owners. | Keep | Filled required deliverable precisely. |
 | 2025-11-17 | ChatGPT-5.1  | “Help align all documents so Clause→Control→Test rows are consistent across ToS, Privacy Addendum, DNS Policy, and Log Retention Policy.” | Provided cross-document consistency and identified duplicate clauses. | Keep | Ensured rubric compliance and internal coherence. |
+| 2025-11-17 | ChatGPT-5.1 | "Suggest an experiment where DNS outage tests graceful degradation." | Generated chaos experiment injecting resolver failure.      | Keep                     | Matches uptime promise. |
+| 2025-11-17 | ChatGPT-5.1 | "Draft retention policy language for raw fraud logs."        | Provided 30-day limit + region-locked buckets.              | Keep                     | Needed for Privacy Addendum and Log Policy. |
+| 2025-11-17 | ChatGPT-5.1 | "Write test ensuring premium tier cannot modify data schema." | Produced red-bar test comparing ingress schemas.            | Modify                   | Adjusted test name and path. |
+| 2025-11-17 | ChatGPT-5.1 | "Propose a fraud-scoring overload scenario for chaos testing." | Suggested load test where premium alert fanout pauses first. | Keep                     | Fits graceful-degradation requirement. |
 
 ---
 
