@@ -55,3 +55,27 @@ Next steps:
 - Document planned chaos experiments in experiments/chaos/placeholder.md
 - Ethics debt ledger populated
 - Update AI collaboration document
+
+## Iteration 2025-11-17
+
+### Red-Bar Test Suite Creation
+- Wrote three full red-bar files:
+  - `test_uptime_reliability.py` (Promise 1)
+  - `test_data_residency_privacy.py` (Promise 2)
+  - `test_monetization_guardrail.py` (Promise 3)
+- Ensured all tests are **pure red-bar** (using `pytest.fail` only).
+- Incorporated empty-chair harm reasoning and clear enforcement points for each clause.
+- Added the monetization event acceptance test:  
+  - `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`
+- Created **chaos_experiment_log.md** with four chaos experiments:
+  - AZ failure  
+  - Premium alert queue overload  
+  - Retention misconfiguration  
+  - Cross-region export attempt  
+- Each experiment includes expected behavior, simulated observed behavior, follow-up actions, and enforcement tests.
+- Manifest structure passed: `uv run python tools/validate_manifest.py --path project3.yaml --check-paths`
+- Red-bar tests failed as expected: `uv run pytest tests/redbar --maxfail=1 -v`
+
+Next Steps
+- Run `speckit check` to validate the manifest and policy links
+- Clean up and review all files for consistency
