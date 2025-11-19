@@ -103,3 +103,29 @@ def test_retention_windows_identical():
         "Retention windows for premium tier not validated as identical to standard. "
         "Premium monetization may enable surveillance drift via extended retention."
     )
+
+def test_premium_overload_does_not_push_standard_behind_baseline():
+    """
+    Monetization acceptance test: premium delivery speed must not make standard-tier
+    merchants wait longer than the baseline alert window during overload.
+
+    Harm:
+      If premium alerts always jump ahead in the queue under high load, standard-tier
+      merchants (including the empty-chair stakeholder) experience longer delays than
+      they would without the premium feature at all. This quietly shifts harm onto
+      merchants who cannot afford premium and can cause missed fraud at checkout.
+
+    Enforcement:
+      Alert queue and worker configuration must guarantee that any overload shedding
+      or slowdowns apply to premium fanout first. Standard-tier alerts must keep their
+      baseline delivery window even when premium volume spikes, and this condition
+      must be validated in CI or by an automated probe.
+
+    Note:
+      Implementation is not wired yet. This test stays red until the enforcement
+      is in place and an automated check can replace this placeholder failure.
+    """
+    pytest.fail(
+        "Premium overload behavior not validated. "
+        "Premium traffic may push standard-tier alerts behind the baseline delivery window."
+    )
