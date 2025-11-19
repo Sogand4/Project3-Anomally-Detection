@@ -38,8 +38,8 @@ monetization:
       description: "Paid tier that reduces alert delivery latency and dashboard refresh interval without changing fraud model, telemetry fields, or retention."
       projected_monthly_revenue: 5000
       evidence_path: "analysis/monetization/premium_alerts.md"
-      acceptance_test: "tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical"
-  viability_statement: "Premium alerts are viable if enough merchants value faster alert delivery while the platform preserves identical privacy, residency, and fairness guarantees across tiers."
+      acceptance_test: "tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline"
+  viability_statement: "Premium alerts are viable if enough merchants value faster delivery while the platform preserves identical privacy, residency, and fairness guarantees, including maintaining standard tier baseline delivery windows during overload."
 
 policies:
   tos_path: "policy/terms_of_service.md"
