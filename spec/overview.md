@@ -1,31 +1,44 @@
-# Spec Overview (replace with SpecKit draft)
+# Spec Overview
 
 <!-- Describe the anomaly detection scenario, stakeholders, and jurisdictional constraints.
 - Reference monetization events and expected telemetry flows.
 - Link to Clause→Control→Test promises in `tests/redbar/`. -->
 
-## 1. Scenario Summary
+## 1. Anomaly Detection Scenario
 Payments Fraud Radar is a real time anomaly detection platform for e commerce transactions across **Canada** and **India**. The system ingests continuous payment telemetry, produces a fraud score within seconds, and fans out alerts to merchants and risk teams. A premium tier offers faster alert delivery and richer dashboards, but all merchants rely on the same baseline fraud model to avoid discriminatory outcomes.
-
-The platform must operate under **PIPEDA** (Canada) and **DPDP** (India), which shape requirements for telemetry minimization, log retention controls, and regional data residency.
-
----
 
 ## 2. Stakeholders
 ### Primary Stakeholders
 - **Cardholders** harmed by false positives blocking legitimate transactions.  
 - **Merchants (Standard Tier)** depending on timely, accurate fraud scoring; harmed by outages or unfair detection.  
 - **Merchants (Premium Tier)** paying for faster alerts; harmed if premium features weaken fairness or privacy.  
-- **Risk and Compliance Teams** ensuring PIPEDA and DPDP alignment.  
-- **SRE and On Call Engineers** responsible for uptime and failover behavior.
+- **Risk and Compliance Teams** ensures PIPEDA and DPDP alignment.  
+- **On Call Engineers** responsible for uptime and failover behavior.
 
-TODO: others?
 ### Empty Chair Stakeholder
-- **Small Indian Merchants** at risk of revenue loss if outages, false positives, or data misrouting affect their ability to process legitimate payments. All monetization and DNS/log decisions must consider their harm first.
+**Small Indian Merchants at the Standard Tier**: When more merchants buy the premium tier, their alerts get sent faster. If the system is not designed carefully, this can push standard-tier alerts further down the line during busy periods. For small Indian merchants, even small delays can mean losing real customers at checkout or having more false positives that block legitimate payments. They often have tight margins, so losing just a few sales can seriously hurt their business. Smaller standard-tier merchants have fewer operational resources to absorb delays, outages, or routing mistakes, making them more exposed to harm.
+
+In this project, we will treat small Indian standard-tier merchants as the empty chair because they are the least able to influence product decisions and the most exposed if premium traffic quietly gets priority over standard traffic. They depend on us to make sure that paid features never starve core fraud protection for everyone else.
+
+To protect this empty chair, we promise that:
+
+- Fraud scoring stays equal for everyone (same model, same accuracy).
+- Premium only gets faster delivery, not better detection.
+- During overload, premium features slow down first, so standard-tier alerts never get pushed aside or delayed.
+- All data stays in the correct region, so merchants are not harmed by misrouting.
+
+This makes sure that monetization does not come at the cost of small standard-tier merchants.
+
+TODO: add a test for this
+
+## 3. Jurisdictional Alignment
+- **PIPEDA:** retention minimization, regional storage, limited export.  
+- **DPDP:** purpose limitation, region labeling, consent aligned handling.  
+- **DNS routing** ensures telemetry from CA/IN stays within approved jurisdictions.
 
 ---
 
-## 3. Telemetry Flows
+## 4. Telemetry Flows
 Incoming transaction events contain:
 - tokenized card identifier  
 - merchant ID  
