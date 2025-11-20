@@ -29,12 +29,34 @@ To protect this empty chair, we promise that:
 
 This makes sure that monetization does not come at the cost of small standard-tier merchants.
 
-TODO: add a test for this
-
 ## 3. Jurisdictional Alignment
-- **PIPEDA:** retention minimization, regional storage, limited export.  
-- **DPDP:** purpose limitation, region labeling, consent aligned handling.  
-- **DNS routing** ensures telemetry from CA/IN stays within approved jurisdictions.
+
+### Canada (PIPEDA)
+
+- Canadian merchant telemetry stays in **ca-central-1**.  
+- Cross-border export requires strong safeguards, so IAM and DNS prevent it by default.  
+- Short-lived identifiable data (30-day TTL) supports access, correction, and deletion rights.
+
+### India (DPDP)
+
+- Indian merchant telemetry processed only in **approved Indian jurisdictions**.  
+- Purpose limitation enforced by using only attributes required for fraud detection.  
+- Identifiable data follows the same 30-day TTL, supporting data principal rights.
+
+### Common Controls (Applied to Both Regions)
+
+- Regional routing at ingestion ensures data stays in its jurisdiction.  
+- Identifiable raw logs deleted after **30 days**; long-term analytics rely only on anonymized aggregates.  
+- Cross-region writes blocked by IAM, DNS routing, and red-bar tests.  
+- Encryption in transit and at rest for all telemetry.  
+- Event-level audit logs for access, scoring, and export attempts.  
+- Premium features change alert delivery time, not underlying data processing.  
+
+### Residency
+
+- **Canada:** ca-central-1  
+- **India:** ap-south-1 
+- Any cross-region analysis uses **only de-identified aggregates**.
 
 ---
 
