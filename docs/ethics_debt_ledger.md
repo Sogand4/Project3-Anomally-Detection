@@ -7,23 +7,29 @@
 
 Update whenever monetization introduces new risk. -->
 
-TODO: verify this with monetization. end of worksheet.md references this page for some reason lol.
+This ledger tracks ethical trade-offs and emerging risks introduced through
+monetization, data handling, and technical design choices. Each entry records
+the impacted stakeholder, the potential harm, the owner responsible for
+mitigation, and the red-bar test that should block deployment if the promise
+is violated.
 
-This ledger tracks ethical trade-offs and emerging risks introduced through monetization, data handling, and technical design choices. Each entry records the impacted stakeholder, the potential harm, the owner responsible for mitigation, and the red-bar test ensuring future enforcement.
 
-| Date       | Harm / Stakeholder                    | Description                                                             | Owner              | Planned Fix                                                     | Associated Test                                                            |
-|------------|----------------------------------------|-------------------------------------------------------------------------|---------------------|------------------------------------------------------------------|----------------------------------------------------------------------------|
-| 2025-11-17 | Empty chair: small Indian merchants    | Premium alert speed could pressure engineering to weaken residency or retention rules to improve latency. | Data Governance     | Hard-code tier-agnostic retention + DNS boundaries; enforce guardrail | tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical |
-| 2025-11-17 | All merchants                          | Pressure to extend raw fraud log retention beyond 30 days for analytics or premium reporting.              | Privacy Steward     | Reject retention extensions; ensure anonymized aggregates only  | tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days      |
-| 2025-11-17 | Empty chair: small Indian merchants    | Faster premium routing could tempt addition of cross-region failover paths, causing residency violations. | SRE Lead            | Lock resolvers per region; deny cross-region DNS resolution      | tests/redbar/test_dns_firewall.py::test_residency_enforced                   |
-| 2025-11-17 | Standard-tier merchants                | Premium latency optimizations could cause degraded standard-tier alert delivery under load.               | Platform Engineering | Enforce graceful-degradation ordering (core scoring → standard → premium) | tests/redbar/test_outage_behavior.py::test_graceful_degradation_order |
-| 2025-11-17 | Cardholders (CA + IN)                  | Feature requests may introduce new telemetry fields incompatible with minimal data principle.             | Product Owner       | Schema validator blocks new fields; require privacy approval    | tests/redbar/test_schema_validation.py::test_telemetry_fields_identical |
-| 2025-11-17 | All merchants                          | Engineering pressure to tune fraud model differently for premium tier could introduce fairness drift.     | ML Lead             | Single shared model; prohibit premium-specific features          | tests/redbar/test_model_parity.py::test_single_model_enforced            |
+| Date       | Stakeholder                     | Description                                                                                                                                                                                         | Owner              | Test Path |
+|------------|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|-----------|
+| 2025-11-17 | Empty chair: small Indian merchants | Premium alert speed could pressure engineering to weaken data residency or shorten-region paths. This would harm small Indian merchants who rely on predictable checkout latency and strict DPDP compliance. | Data Gov           | `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical` |
+| 2025-11-17 | All merchants                   | Pressure to extend raw fraud-log retention beyond 30 days increases surveillance drift and breach exposure. Only anonymized aggregates may persist.                                                 | Privacy Steward    | `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days` |
+| 2025-11-17 | Empty chair: small Indian merchants | Premium routing optimizations might tempt cross-region DNS failover, violating regional isolation. Residency must remain strict for India merchants under DPDP.                                     | SRE Lead           | `tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region` |
+| 2025-11-17 | Standard-tier merchants         | Under load, premium queues could crowd out baseline alerts, causing degraded latency for standard merchants. Graceful-degradation ordering must protect baseline first.                            | Platform Eng       | `tests/redbar/test_outage_behavior.py::test_graceful_degradation_order` |
+| 2025-11-17 | Cardholders (CA + IN)           | Monetization may drive requests for new telemetry fields that violate minimal-data principles. Schema validator must block new fields without privacy review.                                       | Product Owner      | `tests/redbar/test_schema_validation.py::test_telemetry_fields_identical` |
+| 2025-11-17 | All merchants                   | Premium-specific ML tuning could introduce fairness drift if models diverge. All merchants must share a single fraud model.                                                                         | ML Lead            | `tests/redbar/test_model_parity.py::test_single_model_enforced` |
 
----
+## Notes
 
-### Notes
-- The empty-chair stakeholder for this project is **small Indian merchants on the standard tier**, representing those least equipped to absorb harm from privacy drift, outage behavior, or monetization bias.
-- This ledger must be updated **whenever a new monetization idea, feature request, or architectural shortcut introduces additional ethical risk**.
-- Tests listed here must remain red-bar tests—if they fail, deployment should be blocked.
-
+- The empty-chair stakeholder for this project is **small Indian merchants on the
+  standard tier**, representing those least equipped to absorb harm from privacy
+  drift, outage behavior, or monetization bias.
+- This ledger must be updated whenever a new monetization idea, feature request,
+  or architectural shortcut introduces additional ethical risk.
+- Tests listed here are intended to remain red-bar tests; if any of them fail,
+  deployment should be blocked until the underlying risk is addressed or
+  consciously re-evaluated.
