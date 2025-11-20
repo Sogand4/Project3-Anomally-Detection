@@ -233,7 +233,170 @@ If any lifecycle policy permits retention beyond the defined limits, the corresp
 - CloudTrail logs all S3 lifecycle policy modifications
 - Quarterly review of changes by compliance team
 
-## 12. Related Policies
+## 12. Evidence (CLI Output)
+
+The following CLI snippets demonstrate what lifecycle enforcement would look like in an AWS environment.
+
+---
+
+### 12.1 Lifecycle Rule: Raw Logs Deleted After 30 Days
+
+Supports:  
+- Section 2.1 Raw Fraud Logs  
+- Section 6.1 S3 Lifecycle Policies  
+- Promise 2 (Clause → Control → Test)  
+- Test: `test_raw_fraud_logs_deleted_within_30_days`
+
+#### Canadian Bucket
+
+**Command:**
+```bash
+aws s3api get-bucket-lifecycle-configuration \
+  --bucket fraud-rawlogs-ca
+```
+
+**Output:**
+```bash
+{
+  "Rules": [
+    {
+      "ID": "delete-after-30-days",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "Expiration": { "Days": 30 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    }
+  ]
+}
+```
+
+#### Indian Bucket
+
+**Command:**
+```bash
+aws s3api get-bucket-lifecycle-configuration \
+  --bucket fraud-rawlogs-in
+```
+
+**Output:**
+```bash
+{
+  "Rules": [
+    {
+      "ID": "delete-after-30-days",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "Expiration": { "Days": 30 }
+    }
+  ]
+}
+```
+
+### 12.2 CloudWatch Retention: 90 Days (Application Logs) and 30 Days (DNS Logs)
+
+Supports:
+- Section 2.3 Application Logs
+- Section 2.4 DNS Query Logs
+- Section 6.2 CloudWatch Retention
+
+#### Application Logs (90 days)
+**Command:**
+```bash
+aws logs describe-log-groups \
+  --log-group-name-prefix "/fraud-radar/ca/application"
+```
+
+**Output:**
+```bash
+{
+  "logGroups": [
+    {
+      "logGroupName": "/fraud-radar/ca/application",
+      "retentionInDays": 90,
+      "storedBytes": 123456,
+      "arn": "arn:aws:logs:ca-central-1:123456789012:log-group:/fraud-radar/ca/application"
+    }
+  ]
+}
+```
+
+#### DNS Logs (30 days)
+**Command:**
+```bash
+aws logs describe-log-groups \
+  --log-group-name-prefix "/fraud-radar/ca/dns"
+```
+
+**Output:**
+```bash
+{
+  "logGroups": [
+    {
+      "logGroupName": "/fraud-radar/ca/dns",
+      "retentionInDays": 30,
+      "storedBytes": 78910,
+      "arn": "arn:aws:logs:ca-central-1:123456789012:log-group:/fraud-radar/ca/dns"
+    }
+  ]
+}
+```
+
+### 12.3 IAM Region Lock: Data Residency Enforcement
+
+Supports:
+- Section 4 Regional Boundaries
+- Promise 2 (Data Residency and Privacy)
+- Tests: test_canadian_logs_stay_in_ca_central_1, test_indian_logs_stay_in_approved_region
+
+**Command:**
+```bash
+aws iam get-role-policy \
+  --role-name fraud-logging-role \
+  --policy-name fraud-rawlogs-region-lock
+```
+
+**Output:**
+```bash
+{
+  "RoleName": "fraud-logging-role",
+  "PolicyName": "fraud-rawlogs-region-lock",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "AllowWriteCanadianRawLogsOnly",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:AbortMultipartUpload"
+        ],
+        "Resource": "arn:aws:s3:::fraud-rawlogs-ca/*",
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestedRegion": "ca-central-1"
+          }
+        }
+      },
+      {
+        "Sid": "DenyOtherRegionsForCanadianLogs",
+        "Effect": "Deny",
+        "Action": [
+          "s3:PutObject",
+          "s3:AbortMultipartUpload"
+        ],
+        "Resource": "arn:aws:s3:::fraud-rawlogs-ca/*",
+        "Condition": {
+          "StringNotEquals": {
+            "aws:RequestedRegion": "ca-central-1"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+## 13. Related Policies
 
 - `data_handling_policy.md` Defines tokenization and PAN/CVV exclusion
 - `dns_policy.md` Ensures logs remain in approved regions
