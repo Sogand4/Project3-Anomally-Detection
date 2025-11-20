@@ -141,7 +141,7 @@ Documentation and enforcement:
 - Monetization design in `analysis/monetization/premium_merchant_alerts.md`  
 - Residency guardrail tested by `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
-## 5. Clause → Control → Test Mapping
+## 6. Clause → Control → Test Mapping
 ### Promise 1 — Uptime and Graceful Degradation
 
 **Clause**  
@@ -222,27 +222,6 @@ and premium fanout must never starve standard-tier detection.
 - `tests/redbar/test_monetization_guardrail.py::test_alert_queue_routing_does_not_affect_detection`  
 - `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`  
 - `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`  
-
-
-### Promise 1 — Uptime and Graceful Degradation (DNS-focused)
-- **Clause:** The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial failure, the platform first suspends non-critical **premium alert fanout** while keeping core fraud scoring available for all merchants.
-- **Control:** DNS failover records, multi-AZ deployment for the scoring service, per-tenant rate limiting, and latency-based routing between healthy instances.
-- **Enforcement Point:** DNS routing configuration and health-checked scoring endpoints.
-- **Test:** `tests/redbar/test_dns_data_residency.py::test_uptime_placeholder`
-
-### Promise 2 — Telemetry Privacy and Data Residency (logging + retention)
-- **Clause:** Canadian fraud telemetry remains in **ca-central-1**. PAN and CVV values are never written to any log, and **raw fraud logs are deleted within 30 days**, with only anonymized aggregates retained up to one year.
-- **Control:** Log retention policy (S3 lifecycle rules), tokenization pipeline, region-tagged log sinks, and DNS firewall blocking export to non-approved regions.
-- **Enforcement Point:** Log retention controls on fraud log buckets and DNS firewall rules for export destinations.
-- **Test:** `tests/redbar/test_dns_data_residency.py::test_canada_log_bucket`
-
-### Promise 3 — Monetization Guardrail (Premium Alerts)
-- **Clause:** **Premium alerts** may speed up delivery and improve dashboard freshness, but they **must not weaken privacy, data-retention, or fairness protections** compared to the standard tier. The fraud model, data fields collected, and retention windows remain the same for all merchants.
-- **Control:** Monetization configuration flags, alert queue routing rules, and ToS/Privacy policy text that fix identical telemetry and retention across tiers.
-- **Enforcement Point:** Premium feature flag configuration, alert queue definitions, and policy files (`terms_of_service.md`, `privacy_addendum.md`, `log_retention_policy.md`).
-- **Test:** `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
-
----
 
 ## 7. Architecture Overview
 
@@ -347,85 +326,159 @@ and premium fanout must never starve standard-tier detection.
 
 ### Platform Reliability
 
-### Default Tier (Standard Merchants)
-- **99.9% monthly uptime** for the fraud scoring API.
-- **P99 detection latency ≤ 3 seconds** from ingest → model → score.
-- **Alert delivery ≤ 25 seconds** (standard webhook or dashboard update).
-- **Retry window:** up to **2 retries** within 60 seconds if merchant endpoint fails.
-- **Dashboard refresh rate:** every **20 seconds**.
+#### Default Tier (Standard Merchants)
 
-### Premium Tier (Paid Merchants)
-- **99.95% monthly uptime** for alert delivery path (premium-only queue + dedicated routing).
-- **P99 detection latency ≤ 2 seconds** due to priority scheduling under load.
-- **Alert delivery ≤ 10 seconds** end-to-end (fraud signal → webhook push).
-- **Retry window:** up to **5 retries** within 60 seconds with exponential backoff.
-- **Dashboard refresh rate:** every **5 seconds**.
+- **99.9% monthly uptime** for the fraud scoring API (shared across all tiers).  
+- **P99 detection latency ≤ 400 ms** from ingest → model → score (same as premium).  
+- **Standard alert delivery ≤ 180 seconds** (1–3 minute dashboard based alerting).  
+- **Retry window:** up to **2 retries** within 60 seconds if internal delivery fails.  
+- **Dashboard refresh rate:** every **20–60 seconds**.
 
-### Accuracy & Fairness
-- **False positive rate ≤ baseline threshold** across both Canada and India.
-- **No model performance degradation** between standard and premium tiers.
-- **Region balanced detection outcomes** verified in aggregate logs.
+#### Premium Tier (Paid Merchants)
 
-### Privacy & Residency
-- **100% Canadian logs stored only in ca-central-1.**
-- **Raw fraud logs deleted within 30 days** with automated lifecycle controls.
-- **Zero identifiable PAN/CVV fields** in any processing or alert logs.
+- **99.9% monthly uptime** for the shared fraud scoring API (same as standard).  
+- **P99 detection latency ≤ 400 ms** (no tier based priority in scoring).  
+- **Premium alert path SLO:** **99.95% monthly uptime** for the premium alert queue and webhook workers.  
+- **Alert delivery ≤ 10 seconds** end to end (fraud signal → webhook push, p95; p99 < 15 seconds).  
+- **Retry window:** up to **5 retries** within 60 seconds with exponential backoff.  
+- **Dashboard refresh rate:** every **5–10 seconds**.
 
-### Monetization & Ethics Alignment
-- Premium alerts generate projected revenue **without extending retention windows**.
-- **No extra telemetry collected** for premium features beyond what standard merchants already provide.
-- Empty chair stakeholder (small Indian merchants) remains protected in all DNS/log/policy updates.
+> Note: Scoring SLOs are identical for standard and premium to preserve fairness. Premium improves **delivery speed and availability of alerts**, not detection quality.
 
 ---
+
+### Accuracy and Fairness
+
+- **False positive rate** kept at or below an agreed baseline threshold across Canada and India.  
+- **No model performance degradation between tiers:**  
+  - same model version  
+  - same feature set  
+  - same thresholds  
+- **Region balanced detection outcomes** monitored in aggregate, so one region (for example India) does not systematically see worse fraud outcomes.  
+
+---
+
+### Privacy and Residency
+
+- **Canadian telemetry and logs stored only in `ca-central-1`.**  
+- **Indian telemetry and logs stored only in `ap-south-1`.**  
+- **Raw fraud logs deleted within 30 days** via S3 lifecycle policies.  
+- **Aggregated, anonymized metrics kept up to 1 year** only.  
+- **Zero PAN or CVV** in any processing, application, or alert logs, enforced by:  
+  - tokenization at ingress  
+  - input validation that rejects CVV  
+
+---
+
+### Monetization and Ethics Alignment
+
+- **Premium alerts generate revenue** through faster alert delivery and faster dashboards, **not** by:  
+  - collecting extra telemetry  
+  - extending retention windows  
+  - using a different or “better” model  
+- **Same telemetry fields** for standard and premium, enforced by schema validation and tests.  
+- **Same retention windows** (30-day raw, 1-year aggregates) for both tiers.  
+- **No starvation of standard merchants:**  
+  - premium alert queue may be suspended or slowed first under overload  
+  - standard-tier scoring and baseline alert window must not regress below their pre-premium baseline  
+- **Empty chair stakeholder (small Indian merchants)** explicitly protected in:  
+  - data residency tests  
+  - monetization guardrail tests  
+  - graceful degradation behavior
+
 
 ## 9. Key Risks and Mitigations
 
 ### Risk 1 — Data Residency Drift  
-Telemetry from Canadian merchants may be routed to or stored in an unapproved region (e.g., us-east-1) due to misconfigured DNS or analyst exports.  
+Canadian or Indian telemetry is accidentally sent to an unapproved region (e.g., `us-east-1`) due to DNS misrouting, IAM gaps, or analyst export attempts.
+
 **Mitigation:**  
-- Route53 DNS firewall + region-locked IAM boundaries.  
-- Red-bar test: `test_canada_log_bucket`.  
-- Weekly policy review by compliance team.
+- DNS firewall and region-pinned routing (`ca-central-1` for CA, `ap-south-1` for IN).  
+- IAM denies cross-region writes for all telemetry buckets.  
+- Red-bar tests:  
+  - `test_canadian_logs_stay_in_ca_central_1`  
+  - `test_indian_logs_stay_in_approved_region`  
+- Audit logs capture export attempts.  
+- Weekly policy review by privacy steward.
 
 ---
 
 ### Risk 2 — False Positives Causing Merchant Revenue Loss  
-Model misclassifies legitimate transactions, blocking purchases during peak hours.  
+A mis-scored legitimate transaction blocks checkout, disproportionately harming small Indian merchants (empty chair) with thin margins.
+
 **Mitigation:**  
-- Real-time feedback loop for disputed transactions.  
-- P99 latency budget tracking for overloaded scoring pipeline.  
-- Prioritize core scoring over premium fanout under load.
+- Real-time dispute/feedback loop (merchant can send correction events).  
+- P99 scoring latency tracked to avoid timeout-driven false negatives.  
+- Graceful degradation: suspend **premium fanout first**, preserve scoring under load.  
+- Red-bar tests:  
+  - `test_health_check_endpoints_monitored`  
+  - `test_graceful_degradation_order`  
+  - `test_monthly_uptime_slo_tracking`
 
 ---
 
 ### Risk 3 — Premium Tier Distorts Fairness  
-Premium merchants receive materially different detection outcomes, or privacy guardrails weaken to support new paid features.  
+Premium merchants might—intentionally or accidentally—receive:  
+- better detection  
+- more features  
+- different model versions  
+- wider telemetry collection
+
+All of these violate your monetization guardrail.
+
 **Mitigation:**  
-- Fraud model identical across tiers.  
-- Premium alerts only change **delivery speed**, not detection logic.  
-- Red-bar test: `test_monetization_guardrail_placeholder`.  
-- Ethics debt ledger entry documenting fairness constraints.
+- Same model version and same feature set for standard and premium.  
+- Premium improves **delivery speed only**, not detection quality.  
+- No new fields allowed; schema validation enforces equality.  
+- Red-bar tests:  
+  - `test_premium_uses_same_fraud_model`  
+  - `test_premium_collects_same_telemetry_fields`  
+  - `test_retention_windows_identical`  
+  - `test_alert_queue_routing_does_not_affect_detection`  
+  - `test_premium_overload_does_not_push_standard_behind_baseline`
 
 ---
 
 ### Risk 4 — Extended Log Retention (Surveillance Drift)  
-Pressure to support premium analytics could push retention beyond 30 days or reintroduce sensitive identifiers.  
+Pressure to support premium analytics or internal analysis might extend raw log retention past 30 days or accidentally reintroduce unsafe fields.
+
 **Mitigation:**  
-- Mandatory lifecycle policies in log sinks.  
-- Processing logs scrubbed for PII before storage.  
-- Red-bar test for log retention enforcement.  
-- Privacy steward approval required for retention changes.
+- Automatic S3 lifecycle policies deleting raw logs after **30 days**.  
+- Aggregates only (anonymized, 1 year max).  
+- No PAN/CVV in any logs: enforced by ingress tokenization + validation.  
+- Red-bar tests:  
+  - `test_raw_fraud_logs_deleted_within_30_days`  
+  - `test_pan_never_logged`  
+  - `test_cvv_never_logged`  
+- Privacy steward sign-off required for any retention changes.
 
 ---
 
-### Risk 5 — Outage Cascading Across Regions  
-Failure in India or Canada could cascade if DNS failover is misconfigured, harming both regions’ merchants.  
+### Risk 5 — Region Outage Leads to Cascading Failure  
+A failure in Canada or India could affect the other region if DNS or queues are misconfigured, causing a global outage.
+
 **Mitigation:**  
-- Region-specific failover paths and independent alert queues.  
-- Chaos experiments documented in reliability packet.  
-- Prioritize regional isolation in DNS policy.
+- Regions operate independently (isolated streams, alert queues, model services).  
+- DNS routing strictly keeps traffic within its region; no automatic cross-region failover.  
+- Chaos experiments validate failure modes (AZ outage, queue overload).  
+- Red-bar tests:  
+  - `test_multi_az_deployment_active`  
+  - `test_uptime_placeholder` (99.9% SLO enforcement)  
+  - `test_health_check_endpoints_monitored`
 
 ---
+
+### Risk 6 — Premium Overload Harms Standard Merchants  
+High volume premium merchants could saturate workers and delay standard-tier alerts.
+
+**Mitigation:**  
+- Alert queues separated by tier.  
+- Premium fanout gets suspended first during overload (circuit breaker).  
+- Standard-tier baseline alert window preserved.  
+- Red-bar tests:  
+  - `test_alert_queue_routing_does_not_affect_detection`  
+  - `test_premium_overload_does_not_push_standard_behind_baseline`  
+  - `test_graceful_degradation_order`
 
 ## 10. SpecKit Role in This Project
 This overview guides:
