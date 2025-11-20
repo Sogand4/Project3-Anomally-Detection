@@ -5,7 +5,7 @@
 - Link to Clause→Control→Test promises in `tests/redbar/`. -->
 
 ## 1. Anomaly Detection Scenario
-Payments Fraud Radar is a real time anomaly detection platform for e commerce transactions across **Canada** and **India**. The system ingests continuous payment telemetry, produces a fraud score within seconds, and fans out alerts to merchants and risk teams. A premium tier offers faster alert delivery and richer dashboards, but all merchants rely on the same baseline fraud model to avoid discriminatory outcomes.
+Payments Fraud Radar is a real time anomaly detection platform for e commerce transactions across **Canada** and **India**. The system ingests continuous payment telemetry, produces a fraud score within seconds, and fans out alerts to merchants and risk teams. A premium tier serves as an add-on that offers faster alert delivery and richer dashboards, but all merchants rely on the same baseline fraud model to avoid discriminatory outcomes.
 
 ## 2. Stakeholders
 ### Primary Stakeholders
@@ -141,6 +141,7 @@ Documentation and enforcement:
 - Monetization design in `analysis/monetization/premium_merchant_alerts.md`  
 - Residency guardrail tested by `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
+TODO: should i be only using one test?
 ## 6. Clause → Control → Test Mapping
 ### Promise 1 — Uptime and Graceful Degradation
 

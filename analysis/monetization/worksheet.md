@@ -1,25 +1,19 @@
 # Monetization Worksheet Snapshot
 
+<!--
 - Link to Canvas page: https://canvas.ubc.ca/courses/168892/pages/project3-monetization-and-policy-worksheet
 - Record projected revenue, policy touchpoints, and acceptance tests here.
 - Update `project3.yaml` so each monetization event references this file.
-
-# Monetization Worksheet Snapshot
-
-- Link to Canvas page: https://canvas.ubc.ca/courses/168892/pages/project3-monetization-and-policy-worksheet  
-- Record projected revenue, policy touchpoints, and acceptance tests here.  
-- Update `project3.yaml` so each monetization event references this file.  
-
----
+-->
 
 ## 1. Selected Monetization Event
 
-**Event name:** Premium Fraud Alerts  
+**Event name:** Premium Fraud Alerts (Premium SLA pattern)
 **Description:** Paid tier that delivers fraud alerts faster and refreshes dashboards more frequently, while keeping the same fraud model, telemetry fields, and retention windows as the standard tier.
 
 ---
 
-## 2. Baseline Cloud Spend (Rough)
+## 2. Baseline Cloud Spend
 
 | Cost Area              | Est. Monthly Cost | Notes                                               |
 |------------------------|------------------:|-----------------------------------------------------|
@@ -36,8 +30,8 @@ If overall usage drops by about 30 percent, baseline spend is roughly in the \$8
 
 ## 3. Revenue Mix for Premium Alerts
 
-- Price: **\$20 per merchant per month**  
-- Expected premium merchants in month one: **80–120**
+- Price for premium: **\$20 per merchant per month**  
+- Expected number premium merchants in month one: **80–120**
 
 **Projected monthly revenue**
 
@@ -70,7 +64,7 @@ Even in the downside case this still covers most or all incremental costs for th
 - **Clause:** Premium alerts increase revenue but do not change model behavior, telemetry fields, or retention commitments relative to the standard tier.  
 - **Control:** Feature flags for premium alert queues, shared fraud model service, identical log retention policy, and region locked DNS routing.  
 - **Acceptance test path:**  
-  `tests/redbar/test_monetization_guardrail.py::test_premium_alerts_guardrail`
+  `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`
 
 The acceptance test asserts that enabling premium does not introduce new telemetry fields, longer retention, or different models, and does not route traffic to unapproved regions.
 
@@ -82,4 +76,4 @@ Empty chair stakeholder: **small Indian merchants** who remain on the standard t
 
 - Risk: engineering attention or routing changes could favor premium merchants in ways that harm standard merchants during incidents.  
 - Mitigation intent: keep the fraud model, telemetry, and retention identical across tiers; premium only affects alert delivery speed and dashboard refresh rate.  
-- This item should be mirrored in `docs/ethics_debt_ledger.md`.
+- This item is be mirrored in `docs/ethics_debt_ledger.md`.
