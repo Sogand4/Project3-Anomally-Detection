@@ -142,6 +142,87 @@ Documentation and enforcement:
 - Residency guardrail tested by `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
 ## 5. Clause → Control → Test Mapping
+### Promise 1 — Uptime and Graceful Degradation
+
+**Clause**  
+The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial failure, the platform suspends **premium alert fanout first**, keeping core fraud scoring available for all merchants (including small Indian merchants as the empty-chair stakeholder).
+
+**Control**  
+- Multi-AZ deployment for the scoring service  
+- Health-checked scoring endpoints behind the load balancer  
+- Uptime SLO dashboard and alerts  
+- Load-based circuit breaker that pauses premium alert fanout before impacting scoring  
+- Alert queue configuration that preserves baseline standard-tier latency even when premium volume spikes  
+
+**Enforcement Point**  
+- Scoring service deployment and health-check configuration  
+- Circuit-breaker and queue-priority configuration  
+- SLO metrics and dashboards  
+
+**Tests**  
+- `tests/redbar/test_uptime_reliability.py::test_multi_az_deployment_active`  
+- `tests/redbar/test_uptime_reliability.py::test_health_check_endpoints_monitored`  
+- `tests/redbar/test_uptime_reliability.py::test_monthly_uptime_slo_tracking`  
+- `tests/redbar/test_uptime_reliability.py::test_graceful_degradation_order`  
+- `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`  
+
+---
+
+### Promise 2 — Telemetry Privacy and Data Residency
+
+**Clause**  
+Canadian fraud telemetry remains in **ca-central-1**, Indian telemetry remains in **ap-south-1** (or other India-approved regions). PAN and CVV are never written to logs. **Raw fraud logs are deleted within 30 days**, with only anonymized aggregates retained up to one year, and retention is identical for standard and premium tiers.
+
+**Control**  
+- Region-locked log sinks for CA and IN  
+- S3 lifecycle rules expiring raw logs at 30 days  
+- Tokenization of card data at ingress  
+- Input validation that rejects CVV and prevents PAN/CVV from entering logs  
+- ToS, Privacy Addendum, and Log Retention Policy that fix the 30-day plus 1-year pattern  
+
+**Enforcement Point**  
+- S3 bucket configuration and lifecycle policies  
+- Tokenization and validation layer  
+- Policy files: `terms_of_service.md`, `privacy_addendum.md`, `log_retention_policy.md`  
+
+**Tests**  
+- `tests/redbar/test_data_residency_privacy.py::test_canadian_logs_stay_in_ca_central_1`  
+- `tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region`  
+- `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days`  
+- `tests/redbar/test_data_residency_privacy.py::test_pan_never_logged`  
+- `tests/redbar/test_data_residency_privacy.py::test_cvv_never_logged`  
+- `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`  
+
+---
+
+### Promise 3 — Monetization Guardrail (Premium Alerts)
+
+**Clause**  
+**Premium alerts** may speed up delivery and improve dashboard freshness, but they **must not weaken privacy, data-retention, or fairness protections** compared to the standard tier. All merchants share:
+- the **same fraud model**,  
+- the **same request and event fields**,  
+- the **same retention windows**,  
+and premium fanout must never starve standard-tier detection.
+
+**Control**  
+- Shared model configuration for standard and premium scoring  
+- Schema validation that enforces identical telemetry fields for both tiers  
+- Identical S3 lifecycle rules applied to logs for both tiers  
+- Alert queue routing that isolates premium fanout from core scoring and preserves the standard baseline  
+
+**Enforcement Point**  
+- Model inference configuration  
+- API and event schemas  
+- Alert queue and worker configuration  
+- Retention policy files in version control  
+
+**Tests**  
+- `tests/redbar/test_monetization_guardrail.py::test_premium_uses_same_fraud_model`  
+- `tests/redbar/test_monetization_guardrail.py::test_premium_collects_same_telemetry_fields`  
+- `tests/redbar/test_monetization_guardrail.py::test_alert_queue_routing_does_not_affect_detection`  
+- `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`  
+- `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`  
+
 
 ### Promise 1 — Uptime and Graceful Degradation (DNS-focused)
 - **Clause:** The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial failure, the platform first suspends non-critical **premium alert fanout** while keeping core fraud scoring available for all merchants.
