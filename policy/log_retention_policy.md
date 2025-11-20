@@ -5,15 +5,11 @@
 **Owner:** Data Governance Team  
 **Approvers:** Privacy Steward, Compliance Team, SRE Lead
 
----
-
 ## 1. Purpose
 
 This policy defines log sources, retention periods, access controls, and deletion procedures for the Payments Fraud Radar platform. It ensures compliance with PIPEDA (Canada) and DPDP (India) by minimizing unnecessary data retention while supporting operational needs and fraud investigation.
 
 All retention configurations are enforced via S3 lifecycle policies and validated by red-bar tests.
-
----
 
 ## 2. Log Classification
 
@@ -35,8 +31,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 - S3 lifecycle rule automatically deletes objects > 30 days old
 - Deletion logged to CloudTrail for audit trail
 
----
-
 ### 2.2 Anonymized Aggregate Metrics (Medium Sensitivity)
 **Content:**
 - Daily/hourly aggregates: transaction count, false positive rate, P95/P99 latency
@@ -51,8 +45,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 **Deletion:**
 - Automatic TTL-based deletion after 365 days
 
----
-
 ### 2.3 Application Logs (Low Sensitivity)
 **Content:**
 - Service health events (startup, shutdown, restarts)
@@ -65,8 +57,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 
 **Deletion:**
 - CloudWatch log group retention policy set to 90 days
-
----
 
 ### 2.4 DNS Query Logs (Medium Sensitivity)
 **Content:**
@@ -81,8 +71,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 **Deletion:**
 - CloudWatch retention policy set to 30 days
 
----
-
 ### 2.5 Audit Logs (Regulatory)
 **Content:**
 - IAM access events (who accessed what data, when)
@@ -96,8 +84,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 
 **Deletion:**
 - Manual deletion after 7 years with compliance team approval
-
----
 
 ## 3. Access Controls
 
@@ -118,8 +104,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 - **Read access:** Compliance team, security team, Privacy Steward
 - **Write access:** Immutable (CloudTrail managed)
 
----
-
 ## 4. Regional Boundaries
 
 ### 4.1 Canadian Logs
@@ -136,8 +120,6 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 - Configuration and deployment logs (no transaction data) may be stored in a central region
 - Must not contain tokenized identifiers or fraud scores
 
----
-
 ## 5. Monetization and Premium Tier
 
 ### 5.1 Retention Parity
@@ -151,9 +133,7 @@ All retention configurations are enforced via S3 lifecycle policies and validate
 
 ### 5.3 Enforcement
 - Configuration flags enforce retention parity
-- Red-bar test: `tests/redbar/test_monetization_fairness.py::test_retention_windows_identical`
-
----
+- Red-bar test: `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`
 
 ## 6. Automated Enforcement
 
@@ -176,11 +156,10 @@ aws logs put-retention-policy \
 ```
 
 ### 6.3 Red-Bar Tests
-- `tests/redbar/test_data_residency_privacy.py::test_canada_log_retention_30_days`
-- `tests/redbar/test_data_residency_privacy.py::test_india_log_retention_30_days`
-- `tests/redbar/test_monetization_fairness.py::test_retention_windows_identical`
+- `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days`
+- `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`
 
----
+If any lifecycle policy permits retention beyond the defined limits, the corresponding red-bar test will fail and block deployment until corrected.
 
 ## 7. Data Breach Response
 
@@ -199,8 +178,6 @@ aws logs put-retention-policy \
 - Required notifications per PIPEDA/DPDP within 72 hours
 - Update access controls and re-run red-bar tests
 
----
-
 ## 8. Cardholder and Merchant Rights
 
 ### 8.1 Right to Access
@@ -218,8 +195,6 @@ aws logs put-retention-policy \
 - Export provided in encrypted format via secure portal
 - Does not extend retention beyond 30 days
 
----
-
 ## 9. Surveillance Risk Mitigation
 
 ### 9.1 No Extended Retention
@@ -232,23 +207,19 @@ aws logs put-retention-policy \
 - Owner: Data Governance Team
 - Review cadence: Quarterly
 
----
-
 ## 10. Clause → Control → Test Mapping
 
 ### Promise 2: Data Residency and Privacy
 - **Clause:** Raw fraud logs deleted within 30 days, aggregates retained max 1 year
 - **Control:** S3 lifecycle policies, CloudWatch retention settings
-- **Test:** `tests/redbar/test_data_residency_privacy.py::test_canada_log_retention_30_days`
+- **Test:** `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days`
 - **Enforcement Point:** S3 bucket lifecycle configuration and CloudWatch log group settings
 
 ### Promise 3: Monetization Guardrail
 - **Clause:** Premium tier does not extend retention windows
 - **Control:** Identical S3 lifecycle rules for standard and premium merchants
-- **Test:** `tests/redbar/test_monetization_fairness.py::test_retention_windows_identical`
+- **Test:** `tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical`
 - **Enforcement Point:** Feature flag configuration and policy documents
-
----
 
 ## 11. Change Management
 
@@ -262,11 +233,9 @@ aws logs put-retention-policy \
 - CloudTrail logs all S3 lifecycle policy modifications
 - Quarterly review of changes by compliance team
 
----
-
 ## 12. Related Policies
 
-- **Data Handling Policy:** Defines tokenization and PAN/CVV exclusion
-- **DNS Policy:** Ensures logs remain in approved regions
-- **Privacy Addendum:** Customer-facing retention commitments
-- **Terms of Service:** Merchant data access and deletion procedures
+- `data_handling_policy.md` Defines tokenization and PAN/CVV exclusion
+- `dns_policy.md` Ensures logs remain in approved regions
+- `privacy_addendum.md` Customer-facing retention commitments
+- `terms_of_service.md` Merchant data access and deletion procedures
