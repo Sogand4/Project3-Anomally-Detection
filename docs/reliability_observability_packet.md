@@ -1,37 +1,32 @@
 # Project 3 Reliability and Observability Packet
 
-TODO: runbook snippet
+This packet explains how Payments Fraud Radar meets the **99.9 percent uptime target**, enforces **data residency and privacy guarantees**, and protects the **empty-chair stakeholder (small Indian merchants)** from monetization side effects.
 
-This packet summarizes how the system meets the 99.9 percent uptime requirement, how chaos experiments validate graceful degradation and fairness guarantees, and how controls and tests enforce data residency, privacy, and monetization guardrails. It links directly to the Project 3 design which includes core fraud scoring, premium alert fanout, streaming ingestion, and region scoped data handling for Canada and India.
+# 1. Uptime Budget and Dependency Tree
 
----
+Target monthly SLO: **99.9 percent**, which allows **≈43 minutes of downtime per month**.
 
-## 1. Uptime Budget and Dependency Tree
+## 1.1 Dependency Table
 
-Target SLO: 99.9 percent monthly availability.  
-This allows about 43 minutes of downtime per month.
+| Component           | Provider               | Individual SLO | Contribution to Path         | Mitigation                             | Cost to Harden |
+|--------------------|------------------------|----------------|-------------------------------|-----------------------------------------|----------------|
+| API Gateway        | AWS API Gateway        | 99.95 percent  | Ingress for scoring/alerts   | Multi-AZ, retries                       | Medium         |
+| Fraud Scoring      | ECS Fargate / EC2 ASG  | 99.9 percent   | Core scoring path            | Multi-AZ, health checks, circuit break  | High           |
+| Alert Fanout       | SQS + worker fleet     | 99.9 percent   | Premium only                 | Separate pools, worker caps             | Medium         |
+| Stream Processor   | Kafka / Kinesis        | 99.9 percent   | Ingestion                    | Multi shard, DLQ                        | High           |
+| Model Storage      | S3                     | 99.99 percent  | Model loading                | Versioning, regional bucket             | Low            |
+| Log Storage        | S3                     | 99.99 percent  | 30-day raw + 1-yr aggregates | TTL enforced, region-locked             | Low            |
+| Auth / IAM         | AWS IAM                | 99.99 percent  | Access control               | Least privilege                         | Low            |
+| Observability      | CloudWatch             | 99.9 percent   | Metrics + Alerts             | Dashboard backups                       | Medium         |
+| DNS                | Route 53               | 100 percent    | Region-locked resolution     | DNS firewall rules                      | Low            |
 
-### Dependency Table
+## 1.2 Combined Uptime Math
 
-| Component | Provider | Individual SLO | Contribution | Mitigation | Cost to Harden |
-|----------|----------|----------------|--------------|-----------|----------------|
-| API Gateway | AWS API Gateway | 99.95 percent | Entry point for scoring and alerts | Multi AZ, retry policy | Medium |
-| Fraud Scoring Service | ECS Fargate or EC2 Auto Scaling | 99.9 percent | Core scoring path | Multi AZ, health checks, circuit breaker | High |
-| Alert Fanout Workers | SQS plus worker fleet | 99.9 percent | Premium alerts only | Separate worker pool and caps | Medium |
-| Stream Processor | Kinesis or Kafka | 99.9 percent | Processes incoming events | Multi shard, DLQ | High |
-| Storage for models | S3 | 99.99 percent | Model files | Versioning, regional bucket | Low |
-| Storage for logs | S3 | 99.99 percent | Raw logs (30 days) | TTL deletion, region locked | Low |
-| IAM and Auth | AWS IAM | 99.99 percent | Access control | Least privilege policy | Low |
-| Observability stack | CloudWatch | 99.9 percent | Metrics, logs, alerts | Cross region backup dashboards | Medium |
-| DNS | Route 53 | 100 percent | Global resolution | Health checks | Low |
+Core scoring path:
 
-### Combined Uptime Math
+API Gateway → Fraud Scoring → S3 → CloudWatch
 
-If the core path is:
-
-API Gateway → Fraud Scoring → Storage → Observability
-
-Approximate combined availability:
+Combined availability:
 
 0.9995 × 0.999 × 0.9999 × 0.999 ≈ 0.9973  
 This is lower than the target, so mitigation is necessary.
@@ -43,7 +38,16 @@ Failover and health checks remove unhealthy hosts within seconds.
 Alert fanout workers are not part of the core path, so they are allowed to degrade.  
 This design raises the scoring path to sustained 99.9 percent availability.
 
----
+## 1.3 Clause → Control → Test Mapping
+
+| Clause (Policy) | Control (System) | Test (Red-Bar) |
+|-----------------|------------------|----------------|
+| Scoring must meet 99.9 percent uptime | Multi-AZ, health checks | `tests/redbar/test_uptime_reliability.py::test_multi_az_deployment_active` |
+| Premium must not degrade standard tier | Worker caps, separate pools | `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline` |
+| Residency guaranteed (CA/IN) | Region-locked resolvers | `tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region` |
+| Raw logs must delete after 30 days | S3 TTL lifecycle rules | `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days` |
+| Premium DNS cannot bypass residency | Same resolver rules for all tiers | `tests/redbar/test_dns_policy.py::test_premium_dns_no_privilege_escalation` |
+
 
 ## 2. Chaos Experiment Summary
 
@@ -56,77 +60,114 @@ All chaos experiments are logged under `experiments/chaos/2025-11-17.md` and ref
 | 2025-11-17 | Log retention misconfiguration attempt | Retention extension should be blocked | No guardrail present | Add red bar test, retention policy as code |
 | 2025-11-17 | Cross region export attempt | Analyst cannot export Canadian data to USA | Over-permission risk | Tighten IAM, add export red bar tests |
 
----
 
 ## 3. Premium Incident Runbook Snippet
 
-### Trigger
+### Trigger  
+- Premium alert **P99 > 10 seconds (SLA)**  
+- Or **P99 > 120 seconds** operational alert  
+- But **scoring still healthy**
 
-Premium alert P99 latency exceeds threshold or error budget burn indicates overload.
+### Roles  
+- On-call Scoring Engineer  
+- On-call Alerts Engineer  
+- Privacy Steward  
 
-### Roles
+### Steps  
+1. Verify scoring P95/P99 still within SLO.  
+2. Inspect premium queue depth.  
+3. If depth > cap, **pause premium fanout immediately**.  
+4. Drain backlog.  
+5. Re-enable at safe concurrency.  
+6. Notify customers.
 
-On call engineer for scoring.  
-On call engineer for alert fanout.  
-Privacy steward for any data movement review.
+### Customer Communication Template  
+> Premium alert delivery is temporarily delayed.  
+> Core fraud scoring remains fully available and healthy.  
+> We are rebalancing the premium fanout service and will update once resolved.
 
-### Steps
-
-1. Verify that scoring latency remains inside SLO.  
-2. Check worker saturation for the premium queue.  
-3. If scoring is near its limit, immediately pause premium fanout.  
-4. Drain backlog or shift to a safe minimum.  
-5. Communicate to premium customers that alerts are delayed but scoring is healthy.  
-6. Provide estimated recovery time.
-
-### Customer Communication Template
-
-Hello,  
-We are observing high load on the premium alert channel. Core fraud scoring remains fully available. Premium alert delivery may be slower while we rebalance the system. We will notify you once normal operation resumes.
-
-### Red Bar Test
-
+### Red-Bar Test  
 `tests/redbar/test_monetization_guardrail.py::test_graceful_premium_pause_exists`
 
----
 
 ## 4. Metrics and Alert Plan
 
-| Metric | Threshold | Collection | Alert Destination | Monetization Tie |
-|--------|-----------|-----------|-------------------|------------------|
-| P95 scoring latency | 250 ms | CloudWatch | PagerDuty | Ensures fair scoring for standard tier |
-| P99 scoring latency | 400 ms | CloudWatch | PagerDuty | Empty chair protection |
-| Premium alert latency | 2 minutes | CloudWatch | Slack and PagerDuty | Detects overload early |
-| Error budget burn rate | 10 percent per hour | CloudWatch | PagerDuty | Protects core uptime |
-| DNS region violations | Any | Route 53 logs | Slack | Residency guardrail |
-| Raw log retention TTL | 30 days | S3 lifecycle logs | GitHub Actions report | Privacy guardrail |
-| Attempted export across regions | Any | CloudTrail | Slack | Residency enforcement |
-| Queue depth premium | Exceeds cap | CloudWatch | Slack | Premium is allowed to pause |
+| Metric | Threshold | Collection | Destination | Monetization Tie |
+|--------|-----------|------------|-------------|------------------|
+| P95 scoring latency | 250 ms | CloudWatch | PagerDuty | Protects standard tier |
+| P99 scoring latency | 400 ms | CloudWatch | PagerDuty | Empty-chair protection |
+| Premium alert latency | SLA: 10 s; Alert if P99 > 120 s | CloudWatch | Slack + PagerDuty | Premium SLA |
+| Error budget burn | >10% per hour | CloudWatch | PagerDuty | Protects uptime budget |
+| DNS region violations | Any | Route 53 | Slack | Residency guardrail |
+| Raw log TTL | Any object >30 days | S3 TTL logs | GitHub Actions | Privacy guardrail |
+| Cross-region export attempts | Any | CloudTrail | Slack | Residency enforcement |
+| Premium queue depth | cap exceeded | CloudWatch | Slack | Premium pause workflow |
 
----
+# 5. Enforcement Evidence (Logs)
 
-## 5. Enforcement Evidence
+## 5.1 DNS Firewall Logs  
+Evidence for residency enforcement.
 
-Each enforcement point is supported by a test, policy, or log excerpt stored in the repo.
+```text
+2025-11-17T09:15:23Z dns_firewall_ca INFO action=BLOCK
+  query_name=s3.us-east-1.amazonaws.com
+  src_ip=203.0.113.10
+  reason="cross-region endpoint not allowed for CA merchant"
+```
 
-### DNS Firewall Hits
+Match:
+- Clause: “Canadian telemetry must remain in CA.”
+- Control: DNS firewall + region-locked resolvers
+- Test: test_indian_logs_stay_in_approved_region
 
-Route 53 logs show blocked attempts to reach buckets outside the allowed region.  
-Mapped to Clause to Control to Test under data residency.
+## 5.2 S3 TTL (Raw Logs Deleted After 30 Days)
+```text
+2025-11-17T00:05:01Z s3_lifecycle_ca INFO
+  bucket=fraud-rawlogs-ca
+  rule_id=delete-after-30-days
+  action=EXPIRE
+  key=logs/2025/10/17/txn-12345.json
+  age_days=31
+```
 
-### Retention TTL
+Match:
+- Clause: 30-day raw log deletion
+- Control: S3 lifecycle rules
+- Test: test_raw_fraud_logs_deleted_within_30_days
 
-S3 lifecycle transition logs prove that raw logs are deleted after 30 days.  
-Mapped to privacy commitments in the Privacy Addendum.
+## 5.3 CloudTrail – Cross-Region Export Blocked
+```text
+2025-11-17T11:42:10Z cloudtrail WARN
+  eventName=PutObject
+  userIdentity=arn:aws:iam::123456789012:user/analyst-ca
+  requestParameters.bucketName=fraud-exports-us
+  errorCode=AccessDenied
+  errorMessage="Export to non-Canadian bucket blocked by policy"
+```
 
-### Cross Region Export Block
+Match:
+- Clause: “No telemetry leaves region except anonymized aggregate.”
+- Control: IAM deny + DNS deny
+- Test: test_indian_logs_stay_in_approved_region
 
-CloudTrail event shows access denied for a write attempt to us-east-1.  
-Mapped to residency clause in the ToS.
+## 5.4 Monetization Guardrail – Premium Paused Before Harm
+```text
+2025-11-17T09:43:00Z app INFO
+  component=premium_fanout_manager
+  event="premium_pause_activated"
+  reason="queue_depth_exceeded"
+  premium_queue_depth=18500
+  standard_queue_depth=230
+  scoring_p95_ms=210
+  scoring_p99_ms=340
 
-### Monetization Guardrails
+2025-11-17T09:43:02Z alert INFO
+  destination=pagerduty
+  incident="premium_alert_latency_breach"
+  message="Premium alerts paused to protect core scoring SLO"
+```
 
-Alert worker cap log plus the metric alert shows premium fanout paused before any scoring degradation.  
-Mapped to monetization guardrail stating that premium can never impact detection quality for standard merchants.
-
----
+Match:
+- Clause: Premium cannot degrade standard tier
+- Control: Worker caps, pause workflow
+- Tests: test_premium_overload_does_not_push_standard_behind_baseline, test_graceful_premium_pause_exists

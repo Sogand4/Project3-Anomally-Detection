@@ -129,3 +129,32 @@ def test_premium_overload_does_not_push_standard_behind_baseline():
         "Premium overload behavior not validated. "
         "Premium traffic may push standard-tier alerts behind the baseline delivery window."
     )
+
+def test_graceful_premium_pause_exists():
+    """
+    Monetization acceptance test: there must be a documented and enforceable
+    way to pause premium alert fanout before core fraud scoring degrades.
+
+    Harm:
+      If premium alert workers continue to consume capacity during incidents,
+      they can push the scoring service over its latency SLO and cause missed
+      fraud for all merchants. This is especially harmful for the empty-chair
+      stakeholder (small Indian merchants) who cannot afford premium and have
+      less buffer for checkout failures or fraud spikes.
+
+    Enforcement:
+      Premium incident runbook and automation must define:
+        - A clear trigger (for example premium P99 latency or error budget burn)
+        - A feature flag or control that pauses premium fanout while keeping
+          core scoring and standard-tier alerts within their SLOs
+        - An alert path that notifies on call when the pause is active
+
+      This test stays red until the runbook, alert rule, and pause mechanism
+      are all in place and wired into CI or operational checks.
+    """
+
+    pytest.fail(
+        "Graceful premium pause mechanism not yet enforced. "
+        "Premium alert fanout may continue consuming resources during incidents, "
+        "risking core scoring SLOs and harming standard-tier merchants."
+    )
