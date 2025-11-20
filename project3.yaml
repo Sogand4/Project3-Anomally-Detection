@@ -68,7 +68,7 @@ risks:
 
     - description: "Surveillance drift: pressure to extend raw fraud log retention beyond 30 days for analytics or premium reporting."
       mitigation: "Hard 30-day S3 lifecycle rule for raw logs; premium tier prohibited from extending retention; anonymized aggregates only."
-      associated_test: "tests/redbar/test_data_residency_privacy.py::test_log_retention_30_days"
+      associated_test: "tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days"
 
     - description: "Premium tier distorting fairness by altering model behavior or telemetry schema."
       mitigation: "Single shared fraud model + ingestion schema for all tiers; premium only affects delivery speed, not detection logic."

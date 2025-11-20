@@ -1,6 +1,6 @@
 # Terms of Service: Payments Fraud Radar
 Effective Date: 2025-11-17  
-Version: 1.3
+Version: 1.4
 
 > Generated with OpenAI GPT-5.1, 2025-11-17.  
 Manual edits applied to align with monetization requirements, system architecture, and policy references.
