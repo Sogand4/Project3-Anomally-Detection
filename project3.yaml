@@ -24,12 +24,12 @@ clause_control_test:
 
     - clause: "Canadian fraud telemetry remains in ca-central-1 and Indian telemetry remains in ap-south-1; PAN and CVV are never written to any log, and raw fraud logs are deleted within 30 days with only anonymized aggregates retained up to one year."
       control: "Region-locked DNS resolvers, region-scoped S3/log buckets, ingestion schema validation for PAN/CVV, and S3 lifecycle rules for 30-day deletion and 1-year aggregates."
-      test: "tests/redbar/test_data_residency_privacy.py::test_residency_and_retention_enforced"
+      test: "tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days"
       enforcement_point: "Log bucket configuration, ingestion schema checks, DNS firewall rules, and lifecycle policies"
 
     - clause: "Premium alerts may speed up delivery and improve dashboard freshness, but they must not weaken privacy, data-retention, or fairness protections compared to the standard tier; the fraud model, telemetry fields, and retention windows remain the same for all merchants."
       control: "Monetization feature flags, shared ingestion schema and storage pipelines for standard and premium tiers, and identical S3 lifecycle rules across tiers."
-      test: "tests/redbar/test_monetization_guardrail.py::test_premium_telemetry_and_retention_identical"
+      test: "tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical"
       enforcement_point: "Premium feature flag configuration, alert queue routing rules, and policy files (terms_of_service.md, privacy_addendum.md, log_retention_policy.md)"
 
 monetization:
@@ -52,7 +52,7 @@ observability:
   uptime_slo: "99.9"
   p95_latency_ms: 2000
   monitoring_stack: ["CloudWatch", "PagerDuty", "Prometheus"]
-  chaos_experiment_summary: "experiments/chaos/chaos_experiment_log.md"
+  chaos_experiment_summary: "experiments/chaos/2025-11-17.md"
 
 ai_usage:
   tools: ["GitHub Copilot", "ChatGPT-5.1"]
@@ -62,18 +62,18 @@ ai_usage:
 risks:
   ledger_snapshot: "docs/ethics_debt_ledger.md"
   high_risk_items:
-    - description: "Data residency drift: Canadian or Indian telemetry stored or processed outside ca-central-1 / ap-south-1."
-      mitigation: "Region-locked DNS resolvers, S3 buckets scoped per region, and IAM boundaries preventing cross-region exports."
-      associated_test: "tests/redbar/test_dns_firewall.py::test_residency_enforced"
+    - description: "Data residency drift: Canadian or Indian telemetry stored or processed outside ca-central-1 or ap-south-1."
+      mitigation: "Region-locked DNS resolvers, per-region S3 buckets, and IAM boundaries preventing cross-region exports."
+      associated_test: "tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region"
 
-    - description: "Surveillance drift: pressure to extend raw fraud log retention beyond 30 days for analytics or premium reporting."
-      mitigation: "Hard 30-day S3 lifecycle rule for raw logs; premium tier prohibited from extending retention; anonymized aggregates only."
+    - description: "Surveillance drift: pressure to extend raw fraud log retention beyond 30 days."
+      mitigation: "Hard-coded 30-day S3 lifecycle rule; anonymized aggregates only."
       associated_test: "tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days"
 
-    - description: "Premium tier distorting fairness by altering model behavior or telemetry schema."
-      mitigation: "Single shared fraud model + ingestion schema for all tiers; premium only affects delivery speed, not detection logic."
-      associated_test: "tests/redbar/test_model_parity.py::test_single_model_enforced"
+    - description: "Premium tier distorting fairness by altering model behavior."
+      mitigation: "Single shared fraud model; prohibit tier-specific tuning."
+      associated_test: "tests/redbar/test_model_parity.py::test_premium_uses_same_fraud_model"
 
-    - description: "Cross-region outage cascade: DNS failover or routing misconfiguration causing failures in CA to impact IN, or vice versa."
-      mitigation: "Disable cross-region failover paths; maintain isolated scoring stacks; validate resolvers per region."
-      associated_test: "tests/redbar/test_dns_firewall.py::test_cross_region_failover_disabled"
+    - description: "Cross-region DNS drift: CA and IN stacks accidentally fail over into global paths."
+      mitigation: "Disable cross-region failover; enforce DNS firewall."
+      associated_test: "tests/redbar/test_dns_policy.py::test_premium_dns_no_privilege_escalation"

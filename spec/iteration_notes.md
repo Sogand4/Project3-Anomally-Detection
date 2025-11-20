@@ -2,8 +2,6 @@
 
 <!-- Use this file to summarize the major spec revisions you make while iterating with SpecKit. -->
 
-// TODO DUPLICATE THIS TO THE DOCS?
-
 
 ## Iteration 2025-11-14
 

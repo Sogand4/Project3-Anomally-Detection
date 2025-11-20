@@ -141,7 +141,6 @@ Documentation and enforcement:
 - Monetization design in `analysis/monetization/premium_merchant_alerts.md`  
 - Residency guardrail tested by `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
-TODO: should i be only using one test?
 ## 6. Clause → Control → Test Mapping
 ### Promise 1 — Uptime and Graceful Degradation
 
