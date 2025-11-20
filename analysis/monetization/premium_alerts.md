@@ -54,43 +54,56 @@ Revenue cases:
 
 Even with a 30 percent adoption drop, premium revenue still covers the marginal overhead for faster alert queues, priority routing, and the small increase in monitoring needed to support the add-on.
 
-## Policy and Guardrails
+## Policy & Guardrails
 
-TODO
+### ToS and Privacy Clauses  
+Premium alerts must follow the constraints established in the Terms of Service and Privacy Addendum:
 
-### ToS and Privacy Clauses
+- **Terms of Service §4.3 (Premium Alert Delivery Window)**  
+  Premium alerts target a 10–15 second end-to-end delivery time.  
+  Delivery may degrade gracefully by pausing premium extras before touching core fraud scoring.
 
-- ToS excerpt should promise:
-  - that premium alerts target a clear delivery window (for example within 10 seconds end to end under normal conditions)  
-  - that service may degrade gracefully by pausing premium extras before impacting core fraud scoring  
+- **Terms of Service §5.2 (Graceful Degradation Order)**  
+  Premium queues must slow down first during overload. Standard-tier merchants cannot fall behind baseline.
 
-- Privacy addendum should state:
-  - that premium merchants send the **same fraud telemetry** as standard merchants  
-  - that raw logs are retained for **30 days** and anonymized aggregates for about **one year**, regardless of tier  
-  - that the fraud model and feature set are shared across tiers to support fairness
+- **Privacy Addendum §3.1 (Telemetry Parity Across Tiers)**  
+  Premium merchants send the **same telemetry fields** as standard merchants.  
+  No additional identifiers or behavioural features may be collected.
+
+- **Privacy Addendum §4.2 (Retention Guarantees)**  
+  Raw logs are deleted after 30 days and anonymized aggregates after one year — identical across tiers.
 
 ### DNS, Logging, and Data Policies
 
-- **DNS policy**
-  - premium webhook endpoints and dashboards are region locked  
-  - Canadian merchants route to ca central 1 only  
-  - Indian merchants route to an India aligned region only  
-  - failover never sends CA traffic to IN or vice versa  
+- **DNS Policy §3.1 (Residency Enforcement)**  
+  Premium tiers are region-locked (CA → ca-central-1, IN → ap-south-1).  
+  Premium cannot unlock global accelerators, cross-region failover, or additional resolvable domains.
 
-- **Log retention policy**
-  - no extension of the 30 day raw log window for premium merchants  
-  - no special “premium analytics” bucket that keeps identifiable data longer  
+- **DNS Policy §4.3 (No Cross-Region Failover)**  
+  Premium routing remains strictly local; no shortcuts for latency.
 
-- **Data handling policy**
-  - PAN and CVV never stored or logged  
-  - tokenised identifiers used for all merchants  
-  - premium tier does not unlock extra feature fields beyond what standard merchants send
+- **Log Retention Policy §2.1 (Raw Fraud Logs)**  
+  Premium tier cannot extend the 30-day raw log window or request longer-lived buckets.
+
+- **Log Retention Policy §5.1 (Retention Parity Rule)**  
+  Premium reporting uses the same aggregates as standard merchants.  
+  No “premium analytics” or extended retention buckets allowed.
+
+- **Data Handling Policy §3.2 (Prohibited Processing)**  
+  Premium tier may not introduce new data fields, cross-merchant patterns, or cross-region identifiers.
+
+- **Data Handling Policy §2.1 (High Sensitivity Data Rules)**  
+  PAN, CVV, device hashes, feature vectors all share identical handling across tiers.
 
 ### Ethics Debt Items
 
-- **Risk:** premium tier could pressure the team to store more history or collect more identifiers for “better analytics.”  
-- **Guardrail:** retention limits and no extra fields are codified in log and data policies and enforced by tests.  
-- **Ledger:** record this as a monetization driven risk in `docs/ethics_debt_ledger.md` with an owner and a planned review cadence.
+- **Risk:** Premium tier may pressure engineering to weaken retention, residency, or routing boundaries for speed.  
+- **Control:** Retention windows, DNS residency rules, and telemetry parity are codified in policy and checked by tests.  
+- **Ledger Entry:** See `docs/ethics_debt_ledger.md` entry dated 2025-11-20 (“premium-tier DNS routing drift”).  
+- **Associated Tests:**  
+  - `test_monetization_guardrail.py::test_retention_windows_identical`  
+  - `test_schema_validation.py::test_telemetry_fields_identical`  
+  - `test_dns_policy.py::test_premium_dns_no_privilege_escalation`  
 
 ## Acceptance Test
 

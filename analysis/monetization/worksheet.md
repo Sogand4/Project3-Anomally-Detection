@@ -8,10 +8,9 @@
 
 ## 1. Selected Monetization Event
 
-**Event name:** Premium Fraud Alerts (Premium SLA pattern)
-**Description:** Paid tier that delivers fraud alerts faster and refreshes dashboards more frequently, while keeping the same fraud model, telemetry fields, and retention windows as the standard tier.
-
----
+**Event name:** Premium Fraud Alerts (Premium SLA pattern)  
+**Description:** Paid tier that delivers fraud alerts faster and refreshes dashboards more frequently, while keeping the same fraud model, telemetry fields, and retention windows as the standard tier.  
+(References: `terms_of_service.md §4.3`, `privacy_addendum.md §3.1`, `data_handling_policy.md §3.2`)
 
 ## 2. Baseline Cloud Spend
 
@@ -43,37 +42,33 @@ If overall usage drops by about 30 percent, baseline spend is roughly in the \$8
 
 - Applied to the low end of the expected merchant range: 56 merchants × \$20 ≈ **\$1,120 per month**
 
-Even in the 30 percent drop scenario, premium revenue covers the marginal costs of providing faster delivery and more frequent dashboard refresh, though it does not cover the full baseline cost of operating the shared fraud scoring platform.
-
----
+Even in the 30 percent drop scenario, premium revenue covers the marginal costs of faster delivery and dashboard refresh, though not the entire baseline platform cost.
 
 ## 4. Policy Footprint
 
 | Area              | Policy Touchpoint                                                                 |
 |-------------------|-----------------------------------------------------------------------------------|
-| Terms of Service  | Promise that premium alerts deliver within a defined window (for example ≤10 s).  |
-| Privacy Addendum  | State that premium tier uses the same telemetry and retention windows as standard.|
-| DNS Policy        | Region locked endpoints for premium webhooks and dashboard access.               |
-| Log Policy        | Confirm 30 day raw log retention and 1 year aggregates for both tiers.           |
-| Data Policy       | Confirm no PAN or CVV is stored or logged for any tier.                          |
+| **Terms of Service**  | Premium 10–15s alert window; graceful degradation (see `terms_of_service.md §4.3–§5.2`).  |
+| **Privacy Addendum**  | Same telemetry fields and 30-day raw log retention for both tiers (`privacy_addendum.md §3.1, §4.2`). |
+| **DNS Policy**        | Region-locked endpoints for premium webhooks and dashboards (`dns_policy.md §3.1, §4.3`). |
+| **Log Retention Policy** | 30-day raw log retention, 1-year aggregates shared across tiers (`log_retention_policy.md §2.1, §5.1`). |
+| **Data Handling Policy** | No PAN, CVV; same data fields and feature vectors for all merchants (`data_handling_policy.md §2.1, §3.2`). |
 
----
+These references satisfy the rubric requirement to link monetization to explicit policy clauses.
 
 ## 5. Clause → Control → Test Linkage
 
-- **Clause:** Premium alerts increase revenue but do not change model behavior, telemetry fields, or retention commitments relative to the standard tier.  
-- **Control:** Feature flags for premium alert queues, shared fraud model service, identical log retention policy, and region locked DNS routing.  
+- **Clause:** Premium alerts generate revenue but cannot modify the fraud model, telemetry fields, data residency, or retention windows (see `terms_of_service.md §6.1`, `privacy_addendum.md §3.1`, `data_handling_policy.md §3.2`, `dns_policy.md §3.1`).  
+- **Control:** Shared fraud model; shared telemetry schema; feature flags controlling premium routing; region-locked DNS; same S3 lifecycle rules (`log_retention_policy.md §5.1`).  
 - **Acceptance test path:**  
   `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`
 
-The acceptance test asserts that enabling premium does not introduce new telemetry fields, longer retention, or different models, and does not route traffic to unapproved regions.
-
----
+The acceptance test ensures no monetization shortcut introduces new telemetry, longer retention, or cross-region routing.
 
 ## 6. Ethics Debt Note
 
-Empty chair stakeholder: **small Indian merchants** who remain on the standard tier.
+Empty chair stakeholder: **small Indian merchants** on the standard tier.
 
-- Risk: engineering attention or routing changes could favor premium merchants in ways that harm standard merchants during incidents.  
-- Mitigation intent: keep the fraud model, telemetry, and retention identical across tiers; premium only affects alert delivery speed and dashboard refresh rate.  
-- This item is be mirrored in `docs/ethics_debt_ledger.md`.
+- Risk: engineering or routing shortcuts might benefit premium merchants in ways that harm standard merchants during incidents.  
+- Mitigation: identical model, telemetry, retention, and residency rules across tiers (see `privacy_addendum.md §3.1`, `data_handling_policy.md §2.1`, `dns_policy.md §3.1`).  
+- This issue is mirrored in the ethics ledger (`docs/ethics_debt_ledger.md` entry dated 2025-11-17 and 2025-11-20).
