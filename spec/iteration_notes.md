@@ -2,6 +2,9 @@
 
 <!-- Use this file to summarize the major spec revisions you make while iterating with SpecKit. -->
 
+// TODO DUPLICATE THIS TO THE DOCS?
+
+
 ## Iteration 2025-11-14
 
 - Selected **Payments Fraud Radar** as the project scenario due to simpler jurisdictional boundaries (PIPEDA + DPDP) and clear tier-based monetization.

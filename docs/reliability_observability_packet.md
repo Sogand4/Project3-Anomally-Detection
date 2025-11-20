@@ -1,5 +1,7 @@
 # Project 3 Reliability and Observability Packet
 
+TODO: runbook snippet
+
 This packet summarizes how the system meets the 99.9 percent uptime requirement, how chaos experiments validate graceful degradation and fairness guarantees, and how controls and tests enforce data residency, privacy, and monetization guardrails. It links directly to the Project 3 design which includes core fraud scoring, premium alert fanout, streaming ingestion, and region scoped data handling for Canada and India.
 
 ---

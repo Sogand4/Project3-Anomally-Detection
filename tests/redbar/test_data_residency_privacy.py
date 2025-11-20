@@ -18,6 +18,9 @@ Stakeholders harmed by failure:
   - Canadian and Indian cardholders (privacy violations under PIPEDA/DPDP)
   - Merchants exposed to regulatory penalties and reputation damage
   - Small Indian merchants (empty chair) with least capacity to absorb fines
+
+
+Replace each test with a failing case that names the harm, stakeholder, and enforcement point.
 """
 
 import pytest

@@ -7,6 +7,8 @@
 
 Update whenever monetization introduces new risk. -->
 
+TODO: verify this with monetization. end of worksheet.md references this page for some reason lol.
+
 This ledger tracks ethical trade-offs and emerging risks introduced through monetization, data handling, and technical design choices. Each entry records the impacted stakeholder, the potential harm, the owner responsible for mitigation, and the red-bar test ensuring future enforcement.
 
 | Date       | Harm / Stakeholder                    | Description                                                             | Owner              | Planned Fix                                                     | Associated Test                                                            |
