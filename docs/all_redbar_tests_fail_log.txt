@@ -1,0 +1,415 @@
+uv run pytest tests/redbar     
+
+================================================================= test session starts ================================================================= 
+platform win32 -- Python 3.14.0, pytest-9.0.1, pluggy-1.6.0
+rootdir: .\CPSC 436C\project3_repo_template
+configfile: pyproject.toml
+collected 16 items                                                                                                                                     
+
+tests\redbar\test_data_residency_privacy.py FFFFF                                                                                                [ 31%]
+tests\redbar\test_dns_policy.py F                                                                                                                [ 37%] 
+tests\redbar\test_monetization_guardrail.py FFFFFF                                                                                               [ 75%]
+tests\redbar\test_uptime_reliability.py FFFF                                                                                                     [100%]
+
+====================================================================== FAILURES ======================================================================= 
+_______________________________________________________ test_canadian_logs_stay_in_ca_central_1 _______________________________________________________ 
+
+    def test_canadian_logs_stay_in_ca_central_1():
+        """
+        This test enforces the DNS residency rule defined in policy/dns_policy.md.
+
+        Red bar: Canadian fraud logs are not confined to ca-central-1.
+
+        Harm:
+          PIPEDA violation exposing Canadian cardholder data to foreign jurisdictions,
+          creating liability for merchants and privacy harm for cardholders.
+
+        Enforcement:
+          S3 bucket region lock and IAM policies preventing cross-region writes
+          for Canadian log sinks.
+        """
+>       pytest.fail(
+            "Canadian fraud logs not confined to ca-central-1. "
+            "PIPEDA data residency requirement violated."
+        )
+E       Failed: Canadian fraud logs not confined to ca-central-1. PIPEDA data residency requirement violated.
+
+tests\redbar\test_data_residency_privacy.py:43: Failed
+______________________________________________________ test_indian_logs_stay_in_approved_region _______________________________________________________ 
+
+    def test_indian_logs_stay_in_approved_region():
+        """
+        Red bar: Indian transaction logs are not confined to ap-south-1 or other
+        India-approved regions.
+
+        Harm:
+          DPDP violation exposing Indian cardholder data to foreign jurisdictions,
+          particularly harmful to small Indian merchants (empty chair).
+
+        Enforcement:
+          Region-tagged log sinks and IAM policies restricting log writes to
+          India-approved regions only.
+        """
+>       pytest.fail(
+            "Indian transaction logs not confined to approved regions. "
+            "DPDP data residency violated."
+        )
+E       Failed: Indian transaction logs not confined to approved regions. DPDP data residency violated.
+
+tests\redbar\test_data_residency_privacy.py:62: Failed
+_____________________________________________________ test_raw_fraud_logs_deleted_within_30_days ______________________________________________________ 
+
+    def test_raw_fraud_logs_deleted_within_30_days():
+        """
+        Red bar: S3 lifecycle policy does not automatically delete raw fraud logs
+        after 30 days.
+
+        Harm:
+          Surveillance drift as detailed transaction data accumulates indefinitely,
+          violating purpose limitation and increasing breach impact.
+
+        Enforcement:
+          S3 lifecycle rule expiring raw logs after 30 days, with configuration
+          tracked in code and reviewed by privacy steward.
+        """
+>       pytest.fail(
+            "Raw fraud logs not deleted after 30 days. "
+            "Surveillance drift violates retention promise."
+        )
+E       Failed: Raw fraud logs not deleted after 30 days. Surveillance drift violates retention promise.
+
+tests\redbar\test_data_residency_privacy.py:81: Failed
+________________________________________________________________ test_pan_never_logged ________________________________________________________________ 
+
+    def test_pan_never_logged():
+        """
+        Red bar: Full PAN (Primary Account Number) values appear in processing or
+        alert logs.
+
+        Harm:
+          PCI-DSS violation creating massive liability for merchants, with breach
+          notification costs and fines that hit small merchants hardest.
+
+        Enforcement:
+          Tokenization at ingress with automated log scanning to detect PAN-like
+          patterns before deployment.
+        """
+>       pytest.fail(
+            "PAN values may be logged. "
+            "PCI-DSS violation creates existential risk for small merchants."
+        )
+E       Failed: PAN values may be logged. PCI-DSS violation creates existential risk for small merchants.
+
+tests\redbar\test_data_residency_privacy.py:100: Failed
+________________________________________________________________ test_cvv_never_logged ________________________________________________________________ 
+
+    def test_cvv_never_logged():
+        """
+        Red bar: CVV (Card Verification Value) codes appear in processing or alert
+        logs.
+
+        Harm:
+          Severe fraud risk if logs are breached and direct PCI-DSS violation.
+
+        Enforcement:
+          Input validation that rejects any CVV fields and guarantees CVV is never
+          written to logs or storage.
+        """
+>       pytest.fail(
+            "CVV values may be logged. "
+            "PCI-DSS violation and severe fraud risk."
+        )
+E       Failed: CVV values may be logged. PCI-DSS violation and severe fraud risk.
+
+tests\redbar\test_data_residency_privacy.py:118: Failed
+______________________________________________________ test_premium_dns_no_privilege_escalation _______________________________________________________ 
+
+    def test_premium_dns_no_privilege_escalation():
+        """
+        Red bar: Premium-tier merchants resolve DNS differently than standard-tier merchants.
+
+        Harm:
+          Premium merchants may receive cross-region DNS routing or global accelerator paths,
+          violating data residency (PIPEDA/DPDP) and unfairly disadvantaging standard-tier
+          merchants (empty-chair: small Indian merchants). This creates privacy risk,
+          jurisdiction leakage, and fairness drift.
+
+        Enforcement:
+          Region-locked resolvers (ca-central-1 for Canada, ap-south-1 for India),
+          identical DNS allowlists, and no premium-only routing policies.
+
+        Expected Fix:
+          Premium and standard tiers must use identical DNS resolvers, identical allowlists,
+          and identical failover behavior. Premium acceleration occurs only at the
+          application layer, never at the DNS layer.
+        """
+>       pytest.fail(
+            "Premium DNS routing differs from standard tier. "
+            "Residency and fairness risk: premium may escape region-locked resolvers."
+        )
+E       Failed: Premium DNS routing differs from standard tier. Residency and fairness risk: premium may escape region-locked resolvers.
+
+tests\redbar\test_dns_policy.py:22: Failed
+_________________________________________________________ test_premium_uses_same_fraud_model __________________________________________________________ 
+
+    def test_premium_uses_same_fraud_model():
+        """
+        Red bar: Premium tier merchants use a different or enhanced fraud detection
+        model compared to standard tier.
+
+        Harm:
+          Creates discriminatory protection where standard-tier merchants (including
+          small Indian merchants – empty chair) receive inferior fraud detection,
+          violating fairness principles and increasing fraud exposure.
+
+        Enforcement:
+          Model inference service configuration must reference the same model
+          version and feature set for both standard and premium merchants.
+        """
+>       pytest.fail(
+            "Premium tier may use an enhanced fraud model. "
+            "Discriminates against standard-tier merchants, including the empty-chair stakeholder."
+        )
+E       Failed: Premium tier may use an enhanced fraud model. Discriminates against standard-tier merchants, including the empty-chair stakeholder.     
+
+tests\redbar\test_monetization_guardrail.py:42: Failed
+_____________________________________________________ test_premium_collects_same_telemetry_fields _____________________________________________________ 
+
+    def test_premium_collects_same_telemetry_fields():
+        """
+        Red bar: Premium tier collects additional telemetry fields beyond standard tier
+        (for example more device fingerprints, location, or behavioral signals).
+
+        Harm:
+          Creates privacy asymmetry where premium merchants consent to more invasive
+          tracking, pressuring others to upgrade for protection. Violates the promise
+          that all merchants share the same baseline data handling.
+
+        Enforcement:
+          API schema validation ensures identical request and event field sets for
+          standard and premium merchants, enforced in CI.
+        """
+>       pytest.fail(
+            "Premium tier may collect additional telemetry fields. "
+            "Creates privacy asymmetry and upgrade pressure for surveillance features."
+        )
+E       Failed: Premium tier may collect additional telemetry fields. Creates privacy asymmetry and upgrade pressure for surveillance features.
+
+tests\redbar\test_monetization_guardrail.py:62: Failed
+_________________________________________________ test_alert_queue_routing_does_not_affect_detection __________________________________________________ 
+
+    def test_alert_queue_routing_does_not_affect_detection():
+        """
+        Red bar: Premium alert queue prioritization causes standard-tier fraud scores
+        or alerts to be delayed or dropped during high load.
+
+        Harm:
+          Premium traffic starves standard-tier detection and alerting capacity,
+          causing false negatives that allow fraud through for merchants who cannot
+          afford premium (including the empty-chair stakeholder).
+
+        Enforcement:
+          Queue and worker configuration must prioritize core scoring equally for all
+          merchants, and drop/suspend premium fanout before impacting detection.
+        """
+>       pytest.fail(
+            "Premium queue prioritization may starve standard-tier detection. "
+            "Under load, standard merchants (including empty chair) may lose fraud protection."
+        )
+E       Failed: Premium queue prioritization may starve standard-tier detection. Under load, standard merchants (including empty chair) may lose fraud protection.
+
+tests\redbar\test_monetization_guardrail.py:82: Failed
+__________________________________________________________ test_retention_windows_identical ___________________________________________________________ 
+
+    def test_retention_windows_identical():
+        """
+        Monetization acceptance test: validates that premium tier does not extend
+        retention windows beyond the 30-day raw log limit and 1-year anonymized
+        aggregate limit.
+
+        Harm:
+          Extended retention for premium tier creates surveillance drift and violates
+          the principle that all merchants share the same privacy protections.
+
+        Enforcement:
+          S3 lifecycle rules, ToS retention clauses, and privacy addendum must specify
+          identical retention windows for standard and premium tiers, validated in CI.
+        """
+>       pytest.fail(
+            "Retention windows for premium tier not validated as identical to standard. "
+            "Premium monetization may enable surveillance drift via extended retention."
+        )
+E       Failed: Retention windows for premium tier not validated as identical to standard. Premium monetization may enable surveillance drift via extended retention.
+
+tests\redbar\test_monetization_guardrail.py:102: Failed
+____________________________________________ test_premium_overload_does_not_push_standard_behind_baseline _____________________________________________ 
+
+    def test_premium_overload_does_not_push_standard_behind_baseline():
+        """
+        Monetization acceptance test: premium delivery speed must not make standard-tier
+        merchants wait longer than the baseline alert window during overload.
+
+        Harm:
+          If premium alerts always jump ahead in the queue under high load, standard-tier
+          merchants (including the empty-chair stakeholder) experience longer delays than
+          they would without the premium feature at all. This quietly shifts harm onto
+          merchants who cannot afford premium and can cause missed fraud at checkout.
+
+        Enforcement:
+          Alert queue and worker configuration must guarantee that any overload shedding
+          or slowdowns apply to premium fanout first. Standard-tier alerts must keep their
+          baseline delivery window even when premium volume spikes, and this condition
+          must be validated in CI or by an automated probe.
+
+        Note:
+          Implementation is not wired yet. This test stays red until the enforcement
+          is in place and an automated check can replace this placeholder failure.
+        """
+>       pytest.fail(
+            "Premium overload behavior not validated. "
+            "Premium traffic may push standard-tier alerts behind the baseline delivery window."
+        )
+E       Failed: Premium overload behavior not validated. Premium traffic may push standard-tier alerts behind the baseline delivery window.
+
+tests\redbar\test_monetization_guardrail.py:128: Failed
+_________________________________________________________ test_graceful_premium_pause_exists __________________________________________________________ 
+
+    def test_graceful_premium_pause_exists():
+        """
+        Monetization acceptance test: there must be a documented and enforceable
+        way to pause premium alert fanout before core fraud scoring degrades.
+
+        Harm:
+          If premium alert workers continue to consume capacity during incidents,
+          they can push the scoring service over its latency SLO and cause missed
+          fraud for all merchants. This is especially harmful for the empty-chair
+          stakeholder (small Indian merchants) who cannot afford premium and have
+          less buffer for checkout failures or fraud spikes.
+
+        Enforcement:
+          Premium incident runbook and automation must define:
+            - A clear trigger (for example premium P99 latency or error budget burn)
+            - A feature flag or control that pauses premium fanout while keeping
+              core scoring and standard-tier alerts within their SLOs
+            - An alert path that notifies on call when the pause is active
+
+          This test stays red until the runbook, alert rule, and pause mechanism
+          are all in place and wired into CI or operational checks.
+        """
+
+>       pytest.fail(
+            "Graceful premium pause mechanism not yet enforced. "
+            "Premium alert fanout may continue consuming resources during incidents, "
+            "risking core scoring SLOs and harming standard-tier merchants."
+        )
+E       Failed: Graceful premium pause mechanism not yet enforced. Premium alert fanout may continue consuming resources during incidents, risking core scoring SLOs and harming standard-tier merchants.
+
+tests\redbar\test_monetization_guardrail.py:156: Failed
+___________________________________________________________ test_multi_az_deployment_active ___________________________________________________________ 
+
+    def test_multi_az_deployment_active():
+        """
+        Red bar: Fraud scoring service is not deployed across multiple availability zones.
+
+        Harm:
+          A single AZ failure causes a complete scoring outage, blocking legitimate
+          transactions and allowing fraudulent ones through, harming merchants and
+          cardholders. Small Indian merchants (empty chair) have least buffer for
+          prolonged outages.
+
+        Enforcement:
+          Multi-AZ deployment configuration for fraud scoring containers/instances.
+        """
+>       pytest.fail(
+            "Fraud scoring service not deployed in multiple AZs. "
+            "Single AZ failure causes complete service outage."
+        )
+E       Failed: Fraud scoring service not deployed in multiple AZs. Single AZ failure causes complete service outage.
+
+tests\redbar\test_uptime_reliability.py:38: Failed
+________________________________________________________ test_health_check_endpoints_monitored ________________________________________________________ 
+
+    def test_health_check_endpoints_monitored():
+        """
+        Red bar: Health check endpoints for fraud scoring are not monitored by
+        the load balancer or DNS routing.
+
+        Harm:
+          Unhealthy instances continue receiving traffic, causing timeouts and
+          false negatives that allow fraud through, harming cardholders and
+          merchant trust.
+
+        Enforcement:
+          Health checks polling a /health endpoint at a fixed interval, removing
+          unhealthy instances from rotation.
+        """
+>       pytest.fail(
+            "Health check monitoring not configured. "
+            "Unhealthy instances continue receiving traffic, degrading detection accuracy."
+        )
+E       Failed: Health check monitoring not configured. Unhealthy instances continue receiving traffic, degrading detection accuracy.
+
+tests\redbar\test_uptime_reliability.py:58: Failed
+__________________________________________________________ test_monthly_uptime_slo_tracking ___________________________________________________________ 
+
+    def test_monthly_uptime_slo_tracking():
+        """
+        Red bar: 99.9% monthly uptime SLO is not tracked or reported.
+
+        Harm:
+          Without uptime visibility, systemic reliability issues go undetected,
+          allowing prolonged outages that harm all merchants and cardholders.
+
+        Enforcement:
+          Metrics tracking successful vs failed scoring requests, with a monthly
+          SLO dashboard and alerts when the target is at risk.
+        """
+>       pytest.fail(
+            "99.9% uptime SLO not tracked. "
+            "Reliability degradation can go unnoticed until catastrophic failure."
+        )
+E       Failed: 99.9% uptime SLO not tracked. Reliability degradation can go unnoticed until catastrophic failure.
+
+tests\redbar\test_uptime_reliability.py:76: Failed
+___________________________________________________________ test_graceful_degradation_order ___________________________________________________________ 
+
+    def test_graceful_degradation_order():
+        """
+        Red bar: Under high load, premium alert fanout is not automatically suspended
+        before core fraud scoring.
+
+        Harm:
+          Premium features may consume resources during overload, causing core fraud
+          detection to fail for all merchants. This prioritizes monetization over protection
+          and disproportionately harms the empty-chair stakeholder (small Indian merchants).
+
+        Enforcement:
+          Load-based circuit breaker or queue prioritization that suspends premium
+          alert processing when scoring latency exceeds a threshold, while keeping
+          core scoring available.
+        """
+>       pytest.fail(
+            "Graceful degradation order not implemented. "
+            "Under load, premium features may starve core fraud detection for all merchants."
+        )
+E       Failed: Graceful degradation order not implemented. Under load, premium features may starve core fraud detection for all merchants.
+
+tests\redbar\test_uptime_reliability.py:97: Failed
+=============================================================== short test summary info =============================================================== 
+FAILED tests/redbar/test_data_residency_privacy.py::test_canadian_logs_stay_in_ca_central_1 - Failed: Canadian fraud logs not confined to ca-central-1. PIPEDA data residency requirement violated.
+FAILED tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region - Failed: Indian transaction logs not confined to approved regions. DPDP data residency violated.
+FAILED tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days - Failed: Raw fraud logs not deleted after 30 days. Surveillance drift violates retention promise.
+FAILED tests/redbar/test_data_residency_privacy.py::test_pan_never_logged - Failed: PAN values may be logged. PCI-DSS violation creates existential risk for small merchants.
+FAILED tests/redbar/test_data_residency_privacy.py::test_cvv_never_logged - Failed: CVV values may be logged. PCI-DSS violation and severe fraud risk.  
+FAILED tests/redbar/test_dns_policy.py::test_premium_dns_no_privilege_escalation - Failed: Premium DNS routing differs from standard tier. Residency and fairness risk: premium may escape region-locked resolvers.
+FAILED tests/redbar/test_monetization_guardrail.py::test_premium_uses_same_fraud_model - Failed: Premium tier may use an enhanced fraud model. Discriminates against standard-tier merchants, including the empty-chair stakeholder.
+FAILED tests/redbar/test_monetization_guardrail.py::test_premium_collects_same_telemetry_fields - Failed: Premium tier may collect additional telemetry fields. Creates privacy asymmetry and upgrade pressure for surveillance features.
+FAILED tests/redbar/test_monetization_guardrail.py::test_alert_queue_routing_does_not_affect_detection - Failed: Premium queue prioritization may starve standard-tier detection. Under load, standard merchants (including empty chair) may lose fraud prot...
+FAILED tests/redbar/test_monetization_guardrail.py::test_retention_windows_identical - Failed: Retention windows for premium tier not validated as identical to standard. Premium monetization may enable surveillance drift via extended ...
+FAILED tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline - Failed: Premium overload behavior not validated. Premium traffic may push standard-tier alerts behind the baseline delivery window.
+FAILED tests/redbar/test_monetization_guardrail.py::test_graceful_premium_pause_exists - Failed: Graceful premium pause mechanism not yet enforced. Premium alert fanout may continue consuming resources during incidents, risking core sco...
+FAILED tests/redbar/test_uptime_reliability.py::test_multi_az_deployment_active - Failed: Fraud scoring service not deployed in multiple AZs. Single AZ failure causes complete service outage.
+FAILED tests/redbar/test_uptime_reliability.py::test_health_check_endpoints_monitored - Failed: Health check monitoring not configured. Unhealthy instances continue receiving traffic, degrading detection accuracy.
+FAILED tests/redbar/test_uptime_reliability.py::test_monthly_uptime_slo_tracking - Failed: 99.9% uptime SLO not tracked. Reliability degradation can go unnoticed until catastrophic failure.
+FAILED tests/redbar/test_uptime_reliability.py::test_graceful_degradation_order - Failed: Graceful degradation order not implemented. Under load, premium features may starve core fraud detection for all merchants.
+================================================================= 16 failed in 0.28s ================================================================== 

@@ -1,6 +1,7 @@
 # Project 3 SpecKit Starter
 
-This folder mirrors the repository skeleton we will seed in GitHub Classroom.
+SpecKit is the source of truth.  
+All changes follow one path: **Spec → Manifest → Policy → Test**.
 
 ## Pre-Requisites
 
@@ -24,6 +25,34 @@ To validate the redbar testing:
 uv run pytest tests/redbar --maxfail=1
 ```
 
-Replace the placeholder files before submitting. Each directory is pre-created so CI and local tooling should work out of the box.
+## Repository Map
+- **spec/** system overview and iteration notes  
+- **project3.yaml** clause, control, test, enforcement mapping  
+- **tests/redbar/** failing red-bar tests  
+- **policy/, docs/, analysis/** TOS, privacy, DNS, log retention, monetization, ethics ledger  
+- **reports/** manifest validation and observability snapshots  
+- **experiments/** chaos logs  
 
-`tools/validate_manifest.py` checks that the manifest structure and file references are valid. Replace the placeholder files (spec iteration notes, monetization evidence, red-bar tests) with your own before submitting.
+## Daily Loop
+1. Update spec in spec/.  
+2. Add or adjust a red-bar test.  
+3. Run tests (uv run pytest tests/redbar --maxfail=1)
+4. Update project3.yaml and validate (uv run python tools/validate_manifest.py --path project3.yaml --check-paths > reports/manifest_validation.txt)
+5. Commit updated reports and any screenshots.  
+6. Keep only artefacts that strengthen spec, manifest, policies, or tests.
+
+
+## Release Readiness
+- Manifest validated and report committed  
+- Monetization worksheet completed  
+- TOS, Privacy Addendum, DNS and log policies written and referenced  
+- Red-bar tests failing as expected  
+- Ethics ledger and AI log up to date
+
+## Observability
+- See **docs/reliability_observability_snapshot.md** for metrics and logs demonstrating enforcement.  
+- See **experiments/chaos/2025-11-17.md** for outlined chaos experiments.
+
+## Tests
+- **docs/all_redbar_tests_fail_log.txt** contains log of full failing test output  
+- **docs/failing_redbar_test_output.png** provides a screenshot of one failing test  
