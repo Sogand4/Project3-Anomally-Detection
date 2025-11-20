@@ -15,9 +15,7 @@ It aligns with controls defined in:
 - `privacy_addendum.md`  
 - `terms_of_service.md`  
 - `log_retention_policy.md`  
-- `dns_policy.md`  
-
----
+- `dns_policy.md`
 
 ## 2. Data Classification
 
@@ -30,15 +28,17 @@ It aligns with controls defined in:
 - Fraud score + model feature vector  
 - Webhook delivery logs containing status codes and retry counts  
 
+PAN and CVV values are rejected at ingestion and never written to logs  
+(enforced by `test_pan_never_logged` and `test_cvv_never_logged`).
+
 **Storage:**  
 - CA merchants → `ca-central-1`  
 - IN merchants → `ap-south-1`  
 - Never copied to other regions  
+(enforced by `test_canadian_logs_stay_in_ca_central_1` and `test_indian_logs_stay_in_approved_region`)
 
 **Retention:**  
-- 30 days (defined in `log_retention_policy.md`)  
-
----
+- 30 days (defined in `log_retention_policy.md`, enforced by `test_raw_fraud_logs_deleted_within_30_days`)
 
 ### 2.2 Medium Sensitivity  
 (Operational value, moderate retention)
@@ -50,8 +50,6 @@ It aligns with controls defined in:
 **Storage:** regional only  
 **Retention:** 30–365 days depending on log type
 
----
-
 ### 2.3 Low Sensitivity  
 (Operational metadata only)
 
@@ -62,8 +60,6 @@ It aligns with controls defined in:
 **Storage:** regional  
 **Retention:** 90 days  
 
----
-
 ### 2.4 Regulatory (Immutable)
 
 - IAM and S3 access audit logs  
@@ -72,8 +68,6 @@ It aligns with controls defined in:
 
 **Retention:** 7 years  
 **Reason:** PIPEDA + DPDP compliance  
-
----
 
 ## 3. Allowed Processing
 
@@ -108,9 +102,7 @@ Model training may use:
 Training must never use:
 
 - PAN, CVV, identity numbers  
-- Merchant-specific behavioural patterns  
-
----
+- Merchant-specific behavioural patterns 
 
 ## 4. Storage Regions
 
@@ -131,25 +123,19 @@ It must **never** contain:
 - Fraud scores  
 - Merchant-level patterns  
 
----
-
 ## 5. Data Handling Rules That Enable Monetization
 
 Premium features include faster alert delivery and dashboard refresh speeds.  
-**Premium merchants do not receive additional data**, longer retention, or privileged access.
+Premium merchants do **not** receive additional data, longer retention, or privileged access.
 
 ### 5.1 Promise → Clause Mapping
 
-| Monetization Promise | Data Handling Clause | Enforcement |
-|----------------------|----------------------|-------------|
-| Premium tier uses same fraud model | “All merchants share identical detection logic.” | Feature flags + acceptance test |
-| Premium tier cannot weaken privacy | “No premium-only processing paths, retention, or logs.” | Identical storage regions + retention |
-| Premium alerts use same data | “No additional fields collected for premium merchants.” | Ingestion schema validator |
-| Faster reporting only | “Premium dashboards read from same aggregates.” | Dashboard configuration |
-
-These rules protect the empty-chair stakeholder by ensuring premium features **never introduce fairness or privacy regressions**.
-
----
+| Monetization Promise | Data Handling Clause | Enforcement (Test) |
+|----------------------|----------------------|--------------------|
+| Premium uses same fraud model | “All merchants share identical detection logic.” | `test_premium_uses_same_fraud_model` |
+| Premium cannot weaken privacy | “Premium-only data enrichment is prohibited.” | `test_premium_collects_same_telemetry_fields` |
+| Premium does not alter retention | “Retention windows identical for all merchants.” | `test_retention_windows_identical` |
+| Premium alerts must not harm standard | “Processing order never degrades standard-tier privacy or residency.” | `test_premium_overload_does_not_push_standard_behind_baseline` |
 
 ## 6. Empty-Chair Stakeholder Protection
 
@@ -175,9 +161,21 @@ Premium tier must not:
 
 - Increase retention  
 - Add new telemetry fields  
-- Re-route them through global accelerators  
 - Change data residency  
+- Route through global accelerators  
 
-These guardrails ensure that monetization cannot disadvantage the empty-chair stakeholder.
+These protections are enforced by:
 
----
+- `test_premium_collects_same_telemetry_fields`
+- `test_retention_windows_identical`
+- `test_premium_overload_does_not_push_standard_behind_baseline`
+
+## 7. Clause → Control → Test Mapping
+
+| Promise | Clause | Control | Tests |
+|---------|--------|---------|--------|
+| No PAN/CVV ever stored | PAN/CVV rejected at ingestion | Input validation + schema guards | `test_pan_never_logged`, `test_cvv_never_logged` |
+| Region residency | Data remains in merchant region | DNS + IAM boundaries | `test_canadian_logs_stay_in_ca_central_1`, `test_indian_logs_stay_in_approved_region` |
+| 30-day raw retention | Raw logs deleted in 30 days | S3 lifecycle rules | `test_raw_fraud_logs_deleted_within_30_days` |
+| Premium fairness | Identical model + telemetry | Feature flags | `test_premium_uses_same_fraud_model`, `test_premium_collects_same_telemetry_fields` |
+| Premium must not harm standard | Standard not pushed behind baseline | Alert queue routing rules | `test_premium_overload_does_not_push_standard_behind_baseline` |
