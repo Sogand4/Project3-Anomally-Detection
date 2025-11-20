@@ -171,7 +171,7 @@ The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial 
 ### Promise 2 — Telemetry Privacy and Data Residency
 
 **Clause**  
-Canadian fraud telemetry remains in **ca-central-1**, Indian telemetry remains in **ap-south-1** (or other India-approved regions). PAN and CVV are never written to logs. **Raw fraud logs are deleted within 30 days**, with only anonymized aggregates retained up to one year, and retention is identical for standard and premium tiers.
+Canadian fraud telemetry remains in **ca-central-1**, Indian telemetry remains in **ap-south-1** (or other India-approved regions). PAN (Primary Account Number) and CVV (Card Verification Value) are never written to logs. **Raw fraud logs are deleted within 30 days**, with only anonymized aggregates retained up to one year, and retention is identical for standard and premium tiers.
 
 **Control**  
 - Region-locked log sinks for CA and IN  
@@ -248,23 +248,100 @@ and premium fanout must never starve standard-tier detection.
 
 ![architecture diagram](architecture_diagram.png)
 
-Edge: Merchant checkout integrations (web and mobile) call a tokenised fraud scoring API over HTTPS. Mutual TLS between merchants and edge, tenant scoped API keys, signed client config. Premium merchants use a dedicated subdomain for alert webhooks but share the same scoring endpoint.
+### Edge and Ingestion
 
-Ingest: Regional API gateway with WAF in front. Per tenant rate limiting, schema validation, and region tagging (CA vs IN) applied at the edge. Ingress logs captured under the log retention policy, without full PAN or CVV.
-
-Streaming core: Managed event stream (for example Kafka or Kinesis) that decouples the gateway from model services. Idempotent producers, at least once delivery, and dead letter topics for malformed or suspicious events. Separate consumer groups for standard and premium alert fanout.
-
-Anomaly service: Shared fraud model service for all merchants. Feature computation (amount patterns, device history, merchant risk profile) and model inference are done inside the P99 detection budget. A or B experiments and shadow traffic use the same privacy constraints and never leak raw identifiers to logs.
-
-Serving and UI: Tenant scoped APIs return fraud scores and decisions to merchants. Standard merchants receive alerts on a shared queue and dashboards refreshing about every twenty seconds. Premium merchants receive priority queued alerts and dashboards refreshing about every five seconds. Role based access control applies to all dashboards with audited break glass access.
-
-Data stores: Region tagged log sinks and decision stores. Canadian transactions write to ca central 1 stores and Indian transactions write to India aligned stores. Raw fraud logs retained for thirty days, then rolled into aggregated, anonymised metrics kept up to one year. All stores use tokenised identifiers and exclude full PAN and CVV.
-
-DNS and control plane: DNS routing steers merchants to the correct regional stack (CA or IN) and enforces data residency promises. DNS firewall rules block exports or internal endpoints in unapproved regions such as us east 1 for Canadian merchants. Control plane configuration is mirrored across regions without raw transaction identifiers so that policy and deployment changes can be coordinated without moving sensitive data.
-
-Monetization path: Premium merchants enable a feature flag that attaches them to the premium alert queue, stronger alert delivery SLO, and faster dashboard refresh. No extra telemetry is collected beyond what standard merchants send, and log retention windows remain identical across tiers. These differences are documented in the monetization worksheet and ToS or privacy addendum and enforced via SpecKit Clause → Control → Test promises.
+- Merchants call the fraud scoring API over HTTPS with tenant scoped API keys.  
+- Traffic enters through a **regional API gateway + WAF**:  
+  - Canada: `ca-central-1`  
+  - India: `ap-south-1`  
+- Gateway responsibilities:  
+  - schema validation  
+  - per-tenant rate limiting  
+  - attach region tag (`CA` or `IN`)  
+- Ingress logs:  
+  - follow the 30-day raw log retention rule  
+  - contain no PAN or CVV  
 
 ---
+
+### Streaming and Scoring Pipeline
+
+- Events flow into a **region-specific event stream** (Kafka or Kinesis).  
+- The stream decouples ingestion from compute and supports retries and DLQs.  
+- Each region hosts a **fraud model service** that:  
+  - computes features  
+  - runs the **same model** for standard and premium merchants  
+  - produces a fraud score and decision within the P99 budget  
+- No raw cardholder identifiers appear in model or scoring logs.
+
+---
+
+### Alerting and Dashboards
+
+- Scoring outputs are written to **two queues per region**:  
+  - Standard alert queue  
+  - Premium alert queue  
+- Standard tier:  
+  - dashboard refresh about every **20–60 seconds**  
+  - no real-time webhook  
+- Premium tier:  
+  - dedicated queue  
+  - webhook delivery **<10 seconds (p99 <15s)**  
+  - dashboard refresh about **5–10 seconds**  
+- Both tiers use:  
+  - identical model  
+  - identical telemetry fields  
+  - identical retention windows  
+
+---
+
+### Logging and Storage
+
+- Logs and decisions are written to **region-tagged sinks**:  
+  - Canadian telemetry stored only in `ca-central-1`  
+  - Indian telemetry stored only in `ap-south-1`  
+- Retention rules:  
+  - raw logs deleted after **30 days**  
+  - aggregated, anonymized metrics kept up to **1 year**  
+- All identifiers are tokenized.  
+- PAN and CVV are never logged.
+
+---
+
+### DNS and Control Plane
+
+- **DNS routing** directs CA traffic to CA stack and IN traffic to IN stack.  
+- DNS firewall prevents cross-region access or exports.  
+- Control plane defines:  
+  - DNS and residency rules  
+  - log retention policy  
+  - model version configuration  
+  - premium feature flags  
+- Monitoring covers:  
+  - uptime SLO tracking  
+  - P99 scoring latency  
+  - premium degradation order  
+  - export attempts  
+  - queue health  
+
+---
+
+### Monetization Path
+
+- Premium tier enabled through a **feature flag**.  
+- Premium queue provides:  
+  - <10 second alert delivery  
+  - faster dashboard refresh  
+- Premium **does not**:  
+  - collect new telemetry  
+  - extend retention  
+  - use a different model  
+  - alter privacy guarantees  
+- Guardrail enforced by red-bar tests ensuring:  
+  - same fields  
+  - same model  
+  - same retention  
+  - no starvation of standard-tier alerts or scoring  
 
 ## 8. Success Metrics
 
