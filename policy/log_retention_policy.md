@@ -4,6 +4,7 @@
 **Effective Date:** 2025-11-17  
 **Owner:** Data Governance Team  
 **Approvers:** Privacy Steward, Compliance Team, SRE Lead
+**Last Reviewed:** 2025-11-20
 
 ## 1. Purpose
 

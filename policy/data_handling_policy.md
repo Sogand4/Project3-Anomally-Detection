@@ -1,5 +1,7 @@
 # Data Handling Policy: Payments Fraud Radar
 
+**Last Reviewed:** 2025-11-20  
+
 ## 1. Purpose
 
 This policy defines how data is **classified, processed, and stored** within Payments Fraud Radar.  

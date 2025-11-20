@@ -1,4 +1,6 @@
 # DNS Policy: Payments Fraud Radar
+**Last Reviewed:** 2025-11-20  
+**Note: DNS residency guarantees are enforced by red-bar tests in `tests/redbar/test_data_residency_privacy.py`**
 
 ## 1. Purpose
 
@@ -15,8 +17,6 @@ DNS rules directly support the guarantees made in:
 - `terms_of_service.md`  
 - `privacy_addendum.md`  
 - `log_retention_policy.md`
-
----
 
 ## 2. Resolver Architecture
 
@@ -46,8 +46,6 @@ Resolvers must reject:
 - Any attempt to query global analytics services
 
 Queries are blocked at the resolver and logged to DNS firewall logs.
-
----
 
 ## 3. DNS Firewall Rules
 
@@ -83,8 +81,6 @@ Premium tier **does not**:
 
 This satisfies the **monetization guardrail**.
 
----
-
 ## 4. Routing Rules
 
 ### 4.1 Fraud Scoring API
@@ -111,8 +107,6 @@ During a region outage:
 - No failover to the other region  
 - Premium fanout is deprioritized but still region-locked  
 
----
-
 ## 5. Enforcement Automation
 
 ### 5.1 Resolver Configuration Checks
@@ -131,26 +125,30 @@ Block/allow decisions are logged to:
 
 TTL settings verified nightly by automated job.
 
-### 5.3 Red-Bar Tests (Required)
-- `test_dns_firewall_blocks_us_east_1`  
-- `test_residency_enforced`  
-- `test_premium_dns_no_privilege_escalation`  
-- `test_cross_region_failover_disabled`  
+### 5.3 Enforcement and Test Hooks
 
-Tests must pass before deployment.
+DNS controls are one of the enforcement points for the residency, privacy, and
+fairness promises defined in the risk register and other policies.
 
----
+Red-bar tests that touch these promises include:
+
+- `tests/redbar/test_data_residency_privacy.py::test_canadian_logs_stay_in_ca_central_1`  
+- `tests/redbar/test_data_residency_privacy.py::test_indian_logs_stay_in_approved_region`  
+- `tests/redbar/test_data_residency_privacy.py::test_raw_fraud_logs_deleted_within_30_days`  
+- `tests/redbar/test_monetization_guardrail.py::test_alert_queue_routing_does_not_affect_detection`  
+- `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`  
+- `tests/redbar/test_uptime_reliability.py::test_graceful_degradation_order`  
+
+In each case, DNS routing and firewall rules are part of the **Control** side of Clause → Control → Test, alongside IAM and application configuration.
 
 ## 6. Clause → Control → Test Mapping
 
 | Promise | Clause (Policy) | Control | Test |
-|---------|-----------------|---------|------|
-| CA/IN residency guaranteed | Queries resolved only in-region | Region-specific resolvers + firewall | `test_residency_enforced` |
-| No cross-region log routing | S3/Kinesis endpoints must be regional | Resolver deny rules | `test_dns_firewall_blocks_us_east_1` |
-| Premium tier cannot weaken privacy | Premium uses same DNS rules as standard | No premium-only domains/routes | `test_premium_dns_no_privilege_escalation` |
-| Outage cannot cascade across regions | No DNS failover to other region | Failover disabled at resolver | `test_cross_region_failover_disabled` |
-
----
+|--------|------------------|---------|------|
+| CA/IN residency guaranteed | Queries for scoring and logging endpoints are resolved only in-region (Section 2, 3, 4) | Region-specific resolvers and DNS firewall rules that block cross-region endpoints | `test_canadian_logs_stay_in_ca_central_1`, `test_indian_logs_stay_in_approved_region` |
+| No cross-region log routing | S3, Kinesis, and log endpoints must use regional hostnames only (Section 3.1, 4.1, 4.2) | Resolver deny rules for non-regional endpoints plus S3 lifecycle policies | `test_canadian_logs_stay_in_ca_central_1`, `test_indian_logs_stay_in_approved_region`, `test_raw_fraud_logs_deleted_within_30_days` |
+| Premium tier cannot weaken privacy or fairness | Premium uses the same DNS rules and regions as standard; no extra domains, no cross-region failover (Section 3.2, 4.3) | Shared resolver config, no premium-only DNS records, graceful-degradation that pauses premium fanout first | `test_alert_queue_routing_does_not_affect_detection`, `test_premium_overload_does_not_push_standard_behind_baseline`, `test_graceful_degradation_order` |
+| Outage cannot cascade across regions | Outages in one region must not reroute traffic to the other region via DNS (Section 4.3) | DNS failover across regions is disabled; isolation enforced at resolver and firewall | `test_graceful_degradation_order` (combined with multi-AZ deployment tests) |
 
 ## 7. Change Management
 
@@ -177,14 +175,120 @@ Any change to resolvers, firewall rules, or domain allowlists requires approval 
 - Resolver configurations hashed and verified nightly  
 - Any drift triggers a P1 incident  
 
+## 8. Evidence (Mock CLI Output)
+
+The following outputs are evidence showing how resolver rules,
+firewall rules, and region-locked routing would be enforced in AWS.  
+These examples support the enforcement points in this DNS policy and the
+red-bar tests listed in Section 6.
+
 ---
 
-## 8. Related Documents
+### 8.1 DNS Firewall Rule: Residency Enforcement
+
+Supports:
+
+- Section 3.1 Residency Enforcement  
+- Section 5.2 Firewall Enforcement  
+- Promise: CA/IN residency  
+- Test: `test_residency_enforced`
+
+**Command:**
+```bash
+aws route53resolver list-firewall-rules \
+  --firewall-rule-group-id rslvr-fwg-ca
+```
+
+**Output**
+```bash
+{
+  "FirewallRules": [
+    {
+      "Action": "BLOCK",
+      "BlockResponse": "NXDOMAIN",
+      "Priority": 100,
+      "Name": "block-us-east-1"
+    }
+  ]
+}
+```
+
+### 8.2 Resolver Endpoint Region Lock
+
+Supports:
+- Section 2 Resolver Architecture
+- Section 4 Routing Rules
+- Promise: No cross-region routing
+- Test: test_cross_region_failover_disabled
+
+**Command:**
+```bash
+aws route53resolver get-resolver-endpoint \
+  --resolver-endpoint-id rslvr-in-endpoint
+```
+
+**Output**
+```bash
+{
+  "ResolverEndpoint": {
+    "Name": "fraud-in-outbound",
+    "Direction": "OUTBOUND",
+    "IpAddressCount": 3,
+    "Arn": "arn:aws:route53resolver:ap-south-1:123456789012:resolver-endpoint/rslvr-in"
+  }
+}
+```
+
+### 8.3 No Premium DNS Privileges (Premium Uses the Same Resolver)
+
+Supports:
+- Section 3.2 Premium-tier Traffic Treatment
+- Promise: Premium cannot alter DNS routing
+- Test: test_premium_dns_no_privilege_escalation
+
+**Command:**
+```bash
+aws route53resolver list-resolver-endpoints \
+  --query "ResolverEndpoints[?Name=='fraud-premium']"
+```
+
+**Output:**
+```bash
+[]
+# No premium-specific resolver exists. Premium uses the same DNS path.
+```
+
+### 8.4 DNS Allowlist Verification
+
+Supports:
+- Section 2.2 Allowed Domains
+- Section 5.1 Resolver Configuration Checks
+
+
+**Command:**
+```bash
+aws route53resolver list-firewall-domain-lists
+```
+
+**Output:**
+```bash
+{
+  "FirewallDomainLists": [
+    {
+      "Name": "fraud-ca-allowlist",
+      "Domains": [
+        "scoring.ca.central.internal",
+        "logs.ca-central-1.amazonaws.com"
+      ]
+    }
+  ]
+}
+```
+
+## 9. Related Documents
 
 - `privacy_addendum.md` – residency, retention, privacy guarantees  
 - `log_retention_policy.md` – residency and TTL enforcement  
 - `terms_of_service.md` – merchant promises and monetization guardrail  
 - Risk Register (overview.md) – Risks 1 and 5  
-- `project3.yaml` – DNS acceptance tests  
-
----
+- `project3.yaml` – DNS acceptance tests

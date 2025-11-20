@@ -28,6 +28,8 @@ import pytest
 
 def test_canadian_logs_stay_in_ca_central_1():
     """
+    This test enforces the DNS residency rule defined in policy/dns_policy.md.
+
     Red bar: Canadian fraud logs are not confined to ca-central-1.
 
     Harm:
