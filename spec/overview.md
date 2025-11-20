@@ -155,9 +155,9 @@ The fraud scoring API maintains **99.9% monthly uptime**. Under load or partial 
 - Alert queue configuration that preserves baseline standard-tier latency even when premium volume spikes  
 
 **Enforcement Point**  
-- Scoring service deployment and health-check configuration  
-- Circuit-breaker and queue-priority configuration  
-- SLO metrics and dashboards  
+- *(DNS firewall / routing)* DNS routing and load balancer rules removing unhealthy instances  
+- *(Reliability control)* Circuit-breaker and queue priority configuration  
+- *(Data policy for SLO transparency)* SLO metrics and dashboards for 99.9% uptime 
 
 **Tests**  
 - `tests/redbar/test_uptime_reliability.py::test_multi_az_deployment_active`  
@@ -175,15 +175,15 @@ Canadian fraud telemetry remains in **ca-central-1**, Indian telemetry remains i
 
 **Control**  
 - Region-locked log sinks for CA and IN  
-- S3 lifecycle rules expiring raw logs at 30 days  
+- **Log retention controls** via S3 lifecycle rules expiring raw logs at 30 days  
 - Tokenization of card data at ingress  
 - Input validation that rejects CVV and prevents PAN/CVV from entering logs  
 - ToS, Privacy Addendum, and Log Retention Policy that fix the 30-day plus 1-year pattern  
 
 **Enforcement Point**  
-- S3 bucket configuration and lifecycle policies  
-- Tokenization and validation layer  
-- Policy files: `terms_of_service.md`, `privacy_addendum.md`, `log_retention_policy.md`  
+- *(DNS firewall)* DNS routing policy preventing cross-region writes  
+- *(Log retention control)* S3 lifecycle expiration rules  
+- *(Data policy)* `terms_of_service.md`, `privacy_addendum.md`, `log_retention_policy.md`  
 
 **Tests**  
 - `tests/redbar/test_data_residency_privacy.py::test_canadian_logs_stay_in_ca_central_1`  
@@ -211,10 +211,9 @@ and premium fanout must never starve standard-tier detection.
 - Alert queue routing that isolates premium fanout from core scoring and preserves the standard baseline  
 
 **Enforcement Point**  
-- Model inference configuration  
-- API and event schemas  
-- Alert queue and worker configuration  
-- Retention policy files in version control  
+- *(Data policy)* API schemas, ToS, Privacy Addendum  
+- *(Log retention control)* Lifecycle retention policies applied equally to both tiers  
+- Queue and worker configuration ensuring no starvation of standard paths  
 
 **Tests**  
 - `tests/redbar/test_monetization_guardrail.py::test_premium_uses_same_fraud_model`  
