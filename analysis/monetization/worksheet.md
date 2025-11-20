@@ -41,9 +41,9 @@ If overall usage drops by about 30 percent, baseline spend is roughly in the \$8
 
 **Sensitivity (30 percent drop in adoption)**
 
-- 56 merchants × \$20 ≈ **\$1,120 per month**
+- Applied to the low end of the expected merchant range: 56 merchants × \$20 ≈ **\$1,120 per month**
 
-Even in the downside case this still covers most or all incremental costs for the premium alert queue and routing.
+Even in the 30 percent drop scenario, premium revenue covers the marginal costs of providing faster delivery and more frequent dashboard refresh, though it does not cover the full baseline cost of operating the shared fraud scoring platform.
 
 ---
 

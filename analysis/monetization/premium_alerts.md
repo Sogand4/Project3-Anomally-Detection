@@ -1,6 +1,6 @@
 # Premium Alert Monetization Plan
 
-Use this file to spell out the details for the "premium alerts" monetization event referenced in `project3.yaml`. Replace the sections below with your own data when you define your real monetization strategy.
+<!--Use this file to spell out the details for the "premium alerts" monetization event referenced in `project3.yaml`. Replace the sections below with your own data when you define your real monetization strategy.
 
 ## Summary
 - Offering: Premium anomaly alerts with a 5-minute response backed by on-call rotation.
@@ -22,11 +22,7 @@ Use this file to spell out the details for the "premium alerts" monetization eve
 ## Evidence / Research Notes
 - Any supporting research, customer interviews, or cost breakdowns that justify the numbers above.
 
-# Premium Alert Monetization Plan
-
-Use this file to spell out the details for the "premium alerts" monetization event referenced in `project3.yaml`.
-
----
+-->
 
 ## Summary
 
@@ -34,8 +30,6 @@ Use this file to spell out the details for the "premium alerts" monetization eve
 - **What changes:** Alert delivery speed and dashboard freshness for premium merchants.  
 - **What does not change:** Fraud model, detection logic, telemetry fields collected, data residency rules, and log retention windows.  
 - **Customer segment:** Medium to large merchants in Canada and India with higher transaction volume and fraud exposure who want fresher signals for their risk analysts.
-
----
 
 ## Pricing and Viability
 
@@ -56,17 +50,13 @@ Revenue cases:
 
 **Sensitivity analysis (usage drops 30 percent)**
 
-- 56 premium merchants × \$20 = **\$1,120 per month**  
+- Applied to the low end of the expected merchant range: 56 premium merchants × \$20 = **\$1,120 per month**  
 
-Even in the 30 percent drop scenario, premium revenue still comfortably covers the marginal cost of:
-
-- extra alert queue capacity  
-- priority routing  
-- slightly increased monitoring and on call duties
-
----
+Even with a 30 percent adoption drop, premium revenue still covers the marginal overhead for faster alert queues, priority routing, and the small increase in monitoring needed to support the add-on.
 
 ## Policy and Guardrails
+
+TODO
 
 ### ToS and Privacy Clauses
 
@@ -102,26 +92,24 @@ Even in the 30 percent drop scenario, premium revenue still comfortably covers t
 - **Guardrail:** retention limits and no extra fields are codified in log and data policies and enforced by tests.  
 - **Ledger:** record this as a monetization driven risk in `docs/ethics_debt_ledger.md` with an owner and a planned review cadence.
 
----
-
 ## Acceptance Test
 
 - **Red bar test that enforces this monetization promise:**  
-  `tests/redbar/test_monetization_guardrail.py::test_premium_alerts_guardrail`
+  `tests/redbar/test_monetization_guardrail.py::test_premium_overload_does_not_push_standard_behind_baseline`
 
 Test intent:
 
-- Fail until the spec, policies, and configuration clearly show that:
-  - premium alerts do not add new telemetry fields  
-  - premium alerts do not extend retention windows  
-  - premium and standard merchants share the same fraud model and data residency constraints  
-  - DNS routing for premium remains region locked
-
----
+Verify that when Premium alert volume increases, Standard-tier alerts are not delayed beyond their baseline delivery window. Premium may receive faster delivery, but it cannot starve or degrade service for non-paying merchants. This enforces the fairness requirement tied to the Premium monetization event.
 
 ## Evidence and Research Notes
 
-- Premium SLA style monetization aligns with the Canvas guidance, where paid incident response and faster alerts are a common revenue pattern for anomaly platforms.  
-- Using a flat merchant monthly fee keeps math simple for the assignment while still showing a realistic path to cover baseline cloud costs.  
-- The design intentionally avoids “telemetry resale” or extended retention as a first monetization lever to reduce surveillance risk and keep PIPEDA/DPDP alignment.  
-- When implementing ToS and Privacy snippets, note in the AI log which tool produced the first draft and what edits were made by hand.
+- Comparable SaaS products often offer lightweight “speed” or “priority update” add-ons in the **$10–$30 per month** range. These add-ons typically improve delivery speed or refresh frequency without providing dedicated compute or contractual SLA guarantees, which aligns with this Premium tier’s design.
+
+- The adoption estimate of **80–120 merchants** reflects a reasonable early-stage uptake for an opt-in feature in a multi-region e-commerce fraud platform serving Canada and India. The **30 percent sensitivity drop** models common early-market variability in optional add-on engagement.
+
+- Baseline cloud cost reference typical AWS pricing for HTTP API Gateway, stream processing, shared model hosting, and monitoring. Because Premium only adjusts **alert delivery speed** and **dashboard refresh rate**, the marginal cost impact is low and concentrated in:
+  - slightly higher queue throughput during bursts  
+  - more frequent dashboard updates  
+  - small increases in monitoring load  
+
+- The **baseline cost of approximately $1,180 per month** is driven by shared fraud scoring infrastructure used by all merchants. The modest **$20 per month Premium add-on** is therefore viable because it offsets the incremental cost of faster delivery rather than funding the entire platform.
