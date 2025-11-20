@@ -58,43 +58,88 @@ This makes sure that monetization does not come at the cost of small standard-ti
 - **India:** ap-south-1 
 - Any cross-region analysis uses **only de-identified aggregates**.
 
----
+## 4. Telemetry Flows and Monetization Events
 
-## 4. Telemetry Flows
-Incoming transaction events contain:
+This section outlines how transaction telemetry moves through the system and how monetization features interact with that pipeline. Concrete performance numbers are included to make expectations explicit and consistent with the rest of Project 3.
+
+### Telemetry Flows
+
+Incoming transaction telemetry includes:
 - tokenized card identifier  
 - merchant ID  
 - transaction amount and currency  
 - device fingerprint hash  
 - region tag (`CA` or `IN`)  
 - model feature vector and fraud score  
-- optional premium alert routing metadata (webhook, retries)
+- optional premium routing metadata (webhook URL, retry count)
 
-Telemetry flows through:
-1. **Ingress layer** (API gateway, stream processor)  
-2. **Fraud scoring pipeline** (feature engine, model inference)  
-3. **Alert layer** (standard vs premium fanout)  
-4. **Log sinks** (raw logs 30 day retention, aggregated metrics 1 year)  
-5. **DNS routing** which decides which region processes a given merchant’s traffic
+Telemetry follows a strict region-pinned pipeline:
 
-Data residency constraints require:
-- **Canadian logs** stored only in **ca central 1**  
-- **Indian transactions** stored in India aligned buckets  
-- prevention of debug or analytics data leaving approved regions
+**1. Ingestion**  
+- Transaction POST request enters through `/api/v1/score`.  
+- Events are routed to jurisdiction-specific topics:  
+  - `fraud-events-ca` in **ca-central-1**  
+  - `fraud-events-in` in **ap-south-1**  
+- Ingestion SLO: **p95 < 120 ms** across regions.
 
----
+**2. Feature and Scoring Pipeline**  
+- Feature engine produces a vector in under **80 ms**.  
+- ML model returns a fraud score and decision with **p99 < 200 ms**.  
+- Threshold defaults:  
+  - score ≥ 0.8 → block  
+  - 0.5–0.8 → review  
+  - < 0.5 → approve  
+- Purpose limitation enforced: only attributes required for scoring are processed.
 
-# TODO
-## 4. Monetization Events
-### Premium Merchant Alerts
-Merchants can subscribe to receive accelerated fraud alerts and enhanced dashboards. All merchants still use the same fraud model to ensure equitable protection. Premium features must not extend retention windows or introduce extra data collection.
+**3. Alert Layer**  
+Two separate fanout queues prevent interference:
 
-This monetization event is described in:  
-`analysis/monetization/premium_merchant_alerts.md`  
-and evaluated by its acceptance test in:  
-`tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
+- **Standard merchants**  
+  - dashboard notification only  
+  - typical delivery: **1–3 minutes**
 
----
+- **Premium merchants**  
+  - dedicated queue with capped worker pool  
+  - webhook delivery within **< 10 seconds** (p99 < 15 seconds)  
+  - retries: exponential backoff, max **5 attempts**  
+  - premium alerts never trigger extra data collection
+
+**4. Retention**  
+- Identifiable raw logs: **30-day TTL**  
+- Aggregated and anonymized metrics: **1 year retention**  
+- No debugging dumps or analytics exports may leave the region.
+
+**5. Region Routing and Residency**  
+- DNS ensures CA merchants resolve to **ca-central-1**, IN merchants to **ap-south-1**.  
+- IAM denies cross-region writes (for both standard and premium flows).  
+- Red-bar tests verify:  
+  - no scoring happens outside the merchant’s region  
+  - no raw telemetry leaves its jurisdiction
+
+## 5. Monetization Events
+
+Premium features build on the same fraud model and data pipeline, offering faster delivery without changing what data is collected or how long it is retained.
+
+**Premium Merchant Alerts**  
+- Accelerated alert delivery: **< 10 seconds p95**  
+- Dedicated queue separate from scoring CPU to avoid interference  
+- Same fraud model used for both tiers (mandated fairness rule)  
+- Premium never extends retention or adds new fields  
+- If system load spikes, premium alerts degrade **first**, never scoring
+
+**Premium Dashboard Refresh**  
+- Faster refresh cycle: **5–10 second** update intervals  
+- Standard dashboards refresh every **30–60 seconds**  
+- Both dashboards use the same anonymized aggregates
+
+**Billing Telemetry**  
+- Counts of premium alerts delivered (daily)  
+- Stored regionally and retained for **30 days**  
+- Never contains card tokens, device hashes, or scores
+
+Documentation and enforcement:  
+- Monetization design in `analysis/monetization/premium_merchant_alerts.md`  
+- Residency guardrail tested by `tests/redbar/test_dns_data_residency.py::test_monetization_guardrail_placeholder`
 
 ## 5. Clause → Control → Test Mapping
 
@@ -118,14 +163,6 @@ and evaluated by its acceptance test in:
 
 ---
 
-## 6. Jurisdictional Alignment
-- **PIPEDA:** retention minimization, regional storage, limited export.  
-- **DPDP:** purpose limitation, region labeling, consent aligned handling.  
-- **DNS routing** ensures telemetry from CA/IN stays within approved jurisdictions.
-
----
-
-# TODO
 ## 7. Architecture Overview
 
 ![architecture diagram](architecture_diagram.png)
